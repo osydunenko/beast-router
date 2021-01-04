@@ -3,7 +3,6 @@
 #include <boost/asio/bind_executor.hpp>
 #include <boost/beast/http/write.hpp>
 #include <boost/beast/http/read.hpp>
-#include <boost/noncopyable.hpp>
 
 #define CONNECTION_TEMPLATE_DECLARE \
     template<                       \
@@ -17,7 +16,7 @@
 namespace server {
 
 template<class Socket, class CompletionExecutor>
-class connection: private boost::noncopyable
+class connection
 {
 public:
     using self_type = connection;
