@@ -19,7 +19,7 @@ template<class Socket, class CompletionExecutor>
 class connection
 {
 public:
-    using self_type = connection;
+    using self_type = connection<CONNECTION_TEMPLATE_ATTRIBUTES>;
 
     using socket_type = Socket;
 

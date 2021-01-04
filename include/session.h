@@ -307,10 +307,8 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::do_process_request()
 {
     request_type request = m_parser.release();
 
-    {
-        LOCKABLE_ENTER_TO_READ(m_mutex);  
-        provide(std::move(request));
-    }
+    LOCKABLE_ENTER_TO_READ(m_mutex);  
+    provide(std::move(request));
 }
 
 SESSION_TEMPLATE_DECLARE
