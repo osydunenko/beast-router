@@ -22,9 +22,18 @@ int main()
 
     router.get(R"(^/.*$)", 
         [](const beast_http_request &req, http_context &ctx, const std::smatch &match) {
+            ctx.set_user_data<std::string>("Hello");
+            return true; // Propaget events further
+        },
+        [](const beast_http_request &req, http_context &ctx, const std::smatch &match) {
+            auto ctx_data = ctx.get_user_data<std::string&>();
+            ctx_data.second += " World !!!";
+            return true; // Propaget events further
+        },
+        [](const beast_http_request &req, http_context &ctx, const std::smatch &match) {
             beast_http_response rsp{boost::beast::http::status::ok, req.version()};
             rsp.set(boost::beast::http::field::content_type, "text/html");
-            rsp.body() = "Hello World!";
+            rsp.body() = ctx.get_user_data<std::string&>().second;
             rsp.prepare_payload();
             rsp.keep_alive(req.keep_alive());
             ctx.send(rsp);
