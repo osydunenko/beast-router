@@ -36,6 +36,18 @@ public:
     auto get(const std::string &path, OnRequest &&...on_request)
         -> decltype(storage_type(std::declval<OnRequest>()...), void());
 
+    template<class ...OnRequest>
+    auto put(const std::string &path, OnRequest &&...on_request)
+        -> decltype(storage_type(std::declval<OnRequest>()...), void());
+
+    template<class ...OnRequest>
+    auto post(const std::string &path, OnRequest &&...on_request)
+        -> decltype(storage_type(std::declval<OnRequest>()...), void());
+
+    template<class ...OnRequest>
+    auto delete_(const std::string &path, OnRequest &&...on_request)
+        -> decltype(storage_type(std::declval<OnRequest>()...), void());
+
     method_const_map_pointer get_resource_map() const;
 
 private:
@@ -57,6 +69,30 @@ auto router<Session>::get(const std::string &path, OnRequest &&...on_request)
     -> decltype(storage_type(std::declval<OnRequest>()...), void())
 {
     add_resource(path, method_type::get, storage_type{std::forward<OnRequest>(on_request)...});
+}
+
+template<class Session>
+template<class ...OnRequest>
+auto router<Session>::put(const std::string &path, OnRequest &&...on_request)
+    -> decltype(storage_type(std::declval<OnRequest>()...), void())
+{
+    add_resource(path, method_type::put, storage_type{std::forward<OnRequest>(on_request)...});
+}
+
+template<class Session>
+template<class ...OnRequest>
+auto router<Session>::post(const std::string &path, OnRequest &&...on_request)
+    -> decltype(storage_type(std::declval<OnRequest>()...), void())
+{
+    add_resource(path, method_type::post, storage_type{std::forward<OnRequest>(on_request)...});
+}
+
+template<class Session>
+template<class ...OnRequest>
+auto router<Session>::delete_(const std::string &path, OnRequest &&...on_request)
+    -> decltype(storage_type(std::declval<OnRequest>()...), void())
+{
+    add_resource(path, method_type::delete_, storage_type{std::forward<OnRequest>(on_request)...});
 }
 
 template<class Session>

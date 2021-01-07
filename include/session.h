@@ -3,6 +3,8 @@
 #include <regex>
 #include <algorithm>
 #include <queue>
+#include <any>
+#include <type_traits>
 
 #include <boost/beast/http/string_body.hpp>
 #include <boost/beast/http/parser.hpp>
@@ -213,8 +215,18 @@ public:
             return m_flesh->m_connection.is_open();
         }
 
+        template<class Type>
+        std::enable_if_t<std::is_reference_v<Type>, std::pair<bool, Type>> get_user_data();
+
+        template<class Type>
+        std::enable_if_t<!std::is_reference_v<Type>, std::pair<bool, Type>> get_user_data();
+
+        template<class Type>
+        void set_user_data(Type &&data);
+
     private:
         std::shared_ptr<Flesh> m_flesh;
+        std::any m_user_data;
     };
 };
 
@@ -408,6 +420,55 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Flesh>::send(const response_t
             response
         )
     );
+}
+
+SESSION_TEMPLATE_DECLARE
+template<class Flesh>
+template<class Type>
+std::enable_if_t<std::is_reference_v<Type>, std::pair<bool, Type>>
+session<SESSION_TEMPLATE_ATTRIBUTES>::context<Flesh>::get_user_data()
+{
+    using raw_type = std::decay_t<Type>;
+    static_assert(std::is_default_constructible_v<raw_type>);
+    static raw_type ret{};
+
+    if (!m_user_data.has_value()) {
+        return {false, ret};
+    }
+    
+    try {
+        return {true, std::any_cast<Type&>(m_user_data)};
+    } catch(const std::bad_any_cast &) { 
+        return {false, ret};
+    }
+}
+
+SESSION_TEMPLATE_DECLARE
+template<class Flesh>
+template<class Type>
+std::enable_if_t<!std::is_reference_v<Type>, std::pair<bool, Type>>
+session<SESSION_TEMPLATE_ATTRIBUTES>::context<Flesh>::get_user_data()
+{
+    using raw_type = std::decay_t<Type>;
+    static_assert(std::is_default_constructible_v<raw_type>);
+
+    if (!m_user_data.has_value()) {
+        return {false, Type{}};
+    }
+    
+    try {
+        return {true, std::any_cast<Type>(m_user_data)};
+    } catch (const std::bad_any_cast &) { 
+        return {false, Type{}};
+    }
+}
+
+SESSION_TEMPLATE_DECLARE
+template<class Flesh>
+template<class Type>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Flesh>::set_user_data(Type &&data)
+{
+    m_user_data = std::make_any<Type>(std::move(data));
 }
 
 } // namespace server

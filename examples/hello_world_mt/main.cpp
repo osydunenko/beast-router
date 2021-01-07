@@ -28,12 +28,14 @@ int main()
     router.get(R"(^/.*$)", 
         [](const beast_http_request &req, http_context &ctx, const std::smatch &match) {
             LOCKABLE_ENTER_TO_WRITE(mutex);
-            std::clog << "RQ: thread id: " << std::this_thread::get_id() << std::endl; 
+            std::clog << "RQ: method by thread id: " << std::this_thread::get_id() << std::endl; 
+            ctx.set_user_data<std::string>("Hello World !!!");
             return true; // Propaget events further
-        }, [](const beast_http_request &req, http_context &ctx, const std::smatch &match) {
+        }, 
+        [](const beast_http_request &req, http_context &ctx, const std::smatch &match) {
             beast_http_response rsp{boost::beast::http::status::ok, req.version()};
             rsp.set(boost::beast::http::field::content_type, "text/html");
-            rsp.body() = "Hello World !!!";
+            rsp.body() = ctx.get_user_data<std::string&>().second;
             rsp.prepare_payload();
             rsp.keep_alive(req.keep_alive());
             ctx.send(rsp);
@@ -59,7 +61,6 @@ int main()
     sig_int_term.async_wait([](boost::system::error_code const&, int sig) {
         ioc.stop();
     });
-
 
     uint32_t pool_size = std::thread::hardware_concurrency() * 2;
 
