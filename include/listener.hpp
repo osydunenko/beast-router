@@ -7,7 +7,7 @@
 #include <boost/system/error_code.hpp>
 #include <boost/utility/string_view.hpp>
 
-#include "base/strand_stream.h"
+#include "base/strand_stream.hpp"
 
 #define LISTENER_TEMPLATE_ATTRIBUTES \
     Protocol, Acceptor, Socket, Endpoint
