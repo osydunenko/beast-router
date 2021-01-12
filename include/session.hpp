@@ -14,11 +14,11 @@
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/socket_base.hpp>
 
-#include "base/strand_stream.h"
-#include "base/lockable.h"
-#include "base/cb.h"
-#include "connection.h"
-#include "router.h"
+#include "base/strand_stream.hpp"
+#include "base/lockable.hpp"
+#include "base/cb.hpp"
+#include "connection.hpp"
+#include "router.hpp"
 
 #define SESSION_TEMPLATE_ATTRIBUTES \
     Body, RequestParser, ResponseSerializer, Buffer, Protocol, Socket

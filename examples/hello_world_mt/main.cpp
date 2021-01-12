@@ -1,10 +1,10 @@
 #include <thread>
 #include <iostream>
 
-#include "listener.h"
-#include "session.h"
-#include "router.h"
-#include "base/lockable.h"
+#include "listener.hpp"
+#include "session.hpp"
+#include "router.hpp"
+#include "base/lockable.hpp"
 
 #include <boost/asio/signal_set.hpp>
 #include <boost/beast/http/message.hpp>
