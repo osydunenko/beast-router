@@ -23,20 +23,29 @@ void tuple_func_idx(std::size_t idx, const Tuple &tuple, std::index_sequence<Idx
     );
 }
 
-template<class> 
-struct mem_type;
+template<class T>
+struct func_traits
+{
+    using decayed_type = std::decay_t<T>;
+    using return_type = typename func_traits<decltype(&decayed_type::operator())>::return_type;
+};
 
 template<class C, class R, class ...Args>
-struct mem_type<R (C::*)(Args...) const>
+struct func_traits<R(C::*)(Args...) const>
 {
     using return_type = R;
 };
 
-template< class T >
-struct lambda_func_traits: mem_type<
-                            decltype(&T::operator())
-                         >
+template<class C, class R, class ...Args>
+struct func_traits<R(C::*)(Args...)>
 {
+    using return_type = R;
+};
+
+template<class R, class ...Args>
+struct func_traits<R(*)(Args...)>
+{
+    using return_type = R;
 };
 
 } // namespace detail
@@ -120,7 +129,7 @@ private:
     template<class Func>
     struct callback_impl: callback
     {
-        using return_type = typename detail::lambda_func_traits<Func>::return_type;
+        using return_type = typename detail::func_traits<Func>::return_type;
 
         callback_impl(Func func)
         {

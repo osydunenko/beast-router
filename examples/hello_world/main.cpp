@@ -1,6 +1,6 @@
-#include "listener.hpp"
-#include "session.hpp"
-#include "router.hpp"
+#include "beast-router/listener.hpp"
+#include "beast-router/session.hpp"
+#include "beast-router/router.hpp"
 
 #include <boost/asio/signal_set.hpp>
 #include <boost/beast/http/message.hpp>
@@ -23,7 +23,7 @@ int main()
     router.get(R"(^/.*$)", 
         [](const beast_http_request &req, http_context &ctx, const std::smatch &match) {
             ctx.set_user_data<std::string>("Hello");
-            return true; // Propaget events further
+            return true; // Propagate events further
         },
         [](const beast_http_request &req, http_context &ctx, const std::smatch &match) {
             auto ctx_data = ctx.get_user_data<std::string&>();

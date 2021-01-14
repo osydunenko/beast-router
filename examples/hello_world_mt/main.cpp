@@ -1,10 +1,10 @@
 #include <thread>
 #include <iostream>
 
-#include "listener.hpp"
-#include "session.hpp"
-#include "router.hpp"
-#include "base/lockable.hpp"
+#include "beast-router/listener.hpp"
+#include "beast-router/session.hpp"
+#include "beast-router/router.hpp"
+#include "beast-router/base/lockable.hpp"
 
 #include <boost/asio/signal_set.hpp>
 #include <boost/beast/http/message.hpp>
@@ -30,7 +30,7 @@ int main()
             LOCKABLE_ENTER_TO_WRITE(mutex);
             std::clog << "RQ: method by thread id: " << std::this_thread::get_id() << std::endl; 
             ctx.set_user_data<std::string>("Hello World !!!");
-            return true; // Propaget events further
+            return true; // Propagate events further
         }, 
         [](const beast_http_request &req, http_context &ctx, const std::smatch &match) {
             beast_http_response rsp{boost::beast::http::status::ok, req.version()};
