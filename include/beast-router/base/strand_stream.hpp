@@ -3,7 +3,7 @@
 #include <boost/asio/strand.hpp>
 #include <boost/asio/system_timer.hpp>
 
-namespace server {
+namespace beast_router {
 namespace base {
 
 struct strand_stream: boost::asio::strand<boost::asio::system_timer::executor_type>
@@ -17,4 +17,4 @@ struct strand_stream: boost::asio::strand<boost::asio::system_timer::executor_ty
 };
 
 } // namespace base
-} // namespace server
+} // namespace beast_router

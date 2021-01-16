@@ -13,7 +13,7 @@
 #define CONNECTION_TEMPLATE_ATTRIBUTES \
     Socket, CompletionExecutor
 
-namespace server {
+namespace beast_router {
 
 template<class Socket, class CompletionExecutor>
 class connection
@@ -102,4 +102,4 @@ bool connection<CONNECTION_TEMPLATE_ATTRIBUTES>::is_open() const
     return m_socket.is_open();
 }
 
-} // namespace server
+} // namespace beast_router

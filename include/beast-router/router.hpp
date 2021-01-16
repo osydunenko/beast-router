@@ -4,7 +4,7 @@
 
 #include "base/lockable.hpp"
 
-namespace server {
+namespace beast_router {
 
 template<class Session>
 class router
@@ -120,4 +120,4 @@ void router<Session>::add_resource(const std::string &path, const method_type &m
     resource_map.emplace(path, std::move(storage));
 }
 
-} // namespace server
+} // namespace beast_router

@@ -6,7 +6,7 @@
 #include <regex>
 #include <tuple>
 
-namespace server {
+namespace beast_router {
 namespace base { 
 namespace cb {
 namespace detail {
@@ -159,4 +159,4 @@ private:
 
 } // namespace cb
 } // namespace base
-} // namespace server
+} // namespace beast_router

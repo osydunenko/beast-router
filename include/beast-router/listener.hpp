@@ -27,7 +27,7 @@
         return;                   \
     }
 
-namespace server {
+namespace beast_router {
 
 template<
     class Protocol = boost::asio::ip::tcp,
@@ -148,5 +148,5 @@ void listener<LISTENER_TEMPLATE_ATTRIBUTES>::on_spawn_connect(boost::system::err
     m_on_accept(std::move(socket));
 }
 
-} // namespace server
+} // namespace beast_router
 
