@@ -33,7 +33,7 @@
     class Socket              \
     >
 
-namespace server {
+namespace beast_router {
 
 template<
     class Body = boost::beast::http::string_body,
@@ -471,4 +471,4 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Flesh>::set_user_data(Type &&
     m_user_data = std::make_any<Type>(std::move(data));
 }
 
-} // namespace server
+} // namespace beast_router
