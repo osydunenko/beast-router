@@ -21,13 +21,12 @@
 #include "router.hpp"
 
 #define SESSION_TEMPLATE_ATTRIBUTES \
-    Body, RequestParser, ResponseSerializer, Buffer, Protocol, Socket
+    Body, RequestParser, Buffer, Protocol, Socket
 
 #define SESSION_TEMPLATE_DECLARE \
     template<                 \
     class Body,               \
     class RequestParser,      \
-    class ResponseSerializer, \
     class Buffer,             \
     class Protocol,           \
     class Socket              \
@@ -38,7 +37,6 @@ namespace beast_router {
 template<
     class Body = boost::beast::http::string_body,
     class RequestParser = boost::beast::http::request_parser<Body>,
-    class ResponseSerializer = boost::beast::http::response_serializer<Body>,
     class Buffer = boost::beast::flat_buffer,
     class Protocol = boost::asio::ip::tcp,
     class Socket = boost::asio::basic_stream_socket<Protocol>
@@ -61,7 +59,8 @@ public:
 
     using request_parser_type = RequestParser;
 
-    using response_serializer_type = ResponseSerializer;
+    template<class ResponseBody>
+    using response_serializer_type = boost::beast::http::response_serializer<ResponseBody>;
 
     using buffer_type = Buffer;
 
@@ -195,7 +194,7 @@ private:
         method_const_map_pointer m_method_map; 
         on_error_type m_on_error;
         queue m_queue;
-        std::optional<response_serializer_type> m_serializer;
+        std::any m_serializer;
     };
 
 public:
@@ -353,9 +352,10 @@ SESSION_TEMPLATE_DECLARE
 template<class ResponseBody>
 void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::do_write(response_type<ResponseBody> &response)
 {
-    m_serializer.emplace(response);
+    using serializer_type = response_serializer_type<ResponseBody>;
+    m_serializer = serializer_type(response);
     m_connection.async_write(
-        *m_serializer,
+        std::any_cast<serializer_type &>(m_serializer),
         std::bind(
             &flesh::on_write, 
             this->shared_from_this(),
