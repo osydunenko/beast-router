@@ -2,7 +2,6 @@
 
 #include <regex>
 #include <algorithm>
-#include <queue>
 #include <any>
 #include <type_traits>
 
@@ -17,6 +16,7 @@
 #include "base/strand_stream.hpp"
 #include "base/lockable.hpp"
 #include "base/cb.hpp"
+#include "base/conn_queue.hpp"
 #include "connection.hpp"
 #include "router.hpp"
 
@@ -43,7 +43,8 @@ template<
 >
 class session
 {
-    class flesh;
+    class impl;
+
 public:
     template<class>
     class context;
@@ -68,11 +69,13 @@ public:
 
     using socket_type = Socket;
 
+    using timer_type = base::strand_stream::timer_type;
+
     using mutex_type = base::lockable::mutex_type;
 
-    using flesh_type = flesh;
+    using impl_type = impl;
 
-    using context_type = context<flesh_type>;
+    using context_type = context<impl_type>;
 
     using connection_type = connection<socket_type, base::strand_stream::asio_type>;
 
@@ -90,84 +93,28 @@ public:
 
     using router_type = router<self_type>;
 
+    using conn_queue_type = base::conn_queue<impl_type>;
+
     template<class ...OnAction>
     static context_type recv(socket_type &&socket, const router_type &router, const OnAction &...onAction);
 
 private:
 
-    class flesh: public base::strand_stream,
-        public std::enable_shared_from_this<flesh>
+    class impl: public base::strand_stream,
+        public std::enable_shared_from_this<impl>
     {
         template<class>
         friend class context;
 
+        template<class>
+        friend class base::conn_queue;
+
         using method_const_map_pointer = typename router_type::method_const_map_pointer;
 
-        class queue
-        {
-            struct wrk
-            {
-                virtual ~wrk() = default;
-                virtual void operator()() = 0;
-            };
-
-        public:
-            template<class Response>
-            void operator()(Response &response)
-            {
-                using response_type = std::decay_t<Response>; 
-
-                struct wrk_impl: wrk
-                {
-                    wrk_impl(flesh &fl, Response &&response)
-                        : m_flesh{fl}
-                        , m_response{std::move(response)}
-                    {
-                    }
-
-                    void operator()() override
-                    {
-                        m_flesh.do_write(m_response);
-                    }
-
-                    flesh &m_flesh;
-                    response_type m_response;
-                };
-
-                m_items.push(
-                    std::make_unique<wrk_impl>(
-                        m_flesh, 
-                        std::move(response)
-                    )
-                );
-
-                if (m_items.size() == 1) {
-                    (*m_items.front())();
-                }
-            }
-
-            void on_write()
-            {
-                m_items.pop();
-                if (m_items.size() > 0) {
-                    (*m_items.front())();
-                }
-            }
-
-            explicit queue(flesh &fl)
-                : m_flesh{fl}
-            {
-            }
-            
-        private:
-            flesh &m_flesh;
-            std::queue<std::unique_ptr<wrk>> m_items{};
-        };
-
     public:
-        using self_type = flesh;
+        using self_type = impl;
 
-        explicit flesh(socket_type &&socket, mutex_type &mutex, buffer_type &&buffer, 
+        explicit impl(socket_type &&socket, mutex_type &mutex, buffer_type &&buffer,
             method_const_map_pointer method_map,
             const on_error_type &on_error);
 
@@ -193,43 +140,41 @@ private:
         request_parser_type m_parser;
         method_const_map_pointer m_method_map; 
         on_error_type m_on_error;
-        queue m_queue;
+        conn_queue_type m_queue;
         std::any m_serializer;
+
+        // TODO: Implement timer
+        base::strand_stream::timer_type m_timer;
     };
 
 public:
-    template<class Flesh>
+    template<class Impl>
     class context
     {
     public:
-        context(Flesh &flesh);
+        context(Impl &impl);
 
         void recv() const;
 
         template<class ResponseBody>
         void send(const response_type<ResponseBody> &response) const;
 
-        bool is_open() const 
-        {
-            return m_flesh->m_connection.is_open();
-        }
+        bool is_open() const;
+        
+        template<class Type>
+        Type &get_user_data() &;
 
         template<class Type>
-        std::enable_if_t<std::is_reference_v<Type>, std::pair<bool, Type>> get_user_data();
-
-        template<class Type>
-        std::enable_if_t<!std::is_reference_v<Type>, std::pair<bool, Type>> get_user_data();
+        Type &&get_user_data() &&;
 
         template<class Type>
         void set_user_data(Type &&data);
 
     private:
-        std::shared_ptr<Flesh> m_flesh;
+        std::shared_ptr<Impl> m_impl;
         std::any m_user_data;
     };
 };
-
-using default_session = session<>;
 
 SESSION_TEMPLATE_DECLARE
 template<class ...OnAction>
@@ -237,19 +182,19 @@ typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
 session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_type &router, const OnAction &...onAction)
 {
     buffer_type buffer;
-    context_type ctx(*std::make_shared<flesh_type>(
-                std::move(socket), 
-                router.get_mutex(), 
-                std::move(buffer),
-                router.get_resource_map(),
-                onAction...)
+    context_type ctx(*std::make_shared<impl_type>(
+                    std::move(socket), 
+                    router.get_mutex(), 
+                    std::move(buffer),
+                    router.get_resource_map(),
+                    onAction...)
     );
     ctx.recv();
     return ctx;
 }
 
 SESSION_TEMPLATE_DECLARE
-session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::flesh(socket_type &&socket, mutex_type &mutex, buffer_type &&buffer, 
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::impl(socket_type &&socket, mutex_type &mutex, buffer_type &&buffer, 
     method_const_map_pointer method_map,
     const on_error_type &on_error)
     : base::strand_stream{socket.get_executor()}
@@ -260,11 +205,14 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::flesh(socket_type &&socket, mutex_t
     , m_method_map{method_map}
     , m_on_error{on_error}
     , m_queue{*this}
+    , m_serializer{}
+    , m_timer{base::strand_stream::get_inner_executor(), 
+        timer_type::time_point::max()}
 {
 }
 
 SESSION_TEMPLATE_DECLARE
-typename session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::self_type &session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::recv()
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &session<SESSION_TEMPLATE_ATTRIBUTES>::impl::recv()
 {
     do_read();
     return *this;
@@ -272,14 +220,14 @@ typename session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::self_type &session<SESSION
 
 SESSION_TEMPLATE_DECLARE
 template<class ResponseBody>
-typename session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::self_type &session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::send(response_type<ResponseBody> &response)
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(response_type<ResponseBody> &response)
 {
     m_queue(response);
     return *this;
 }
 
 SESSION_TEMPLATE_DECLARE
-void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::on_read(boost::system::error_code ec, size_t bytes_transferred)
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_read(boost::system::error_code ec, size_t bytes_transferred)
 {
     if (ec == boost::beast::http::error::end_of_stream) {
         do_eof(shutdown_type::shutdown_both);
@@ -294,15 +242,15 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::on_read(boost::system::error_c
 }
 
 SESSION_TEMPLATE_DECLARE
-void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::do_read()
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_read()
 {
     m_connection.async_read(m_buffer, m_parser,
-        std::bind(&flesh::on_read, this->shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+        std::bind(&impl::on_read, this->shared_from_this(), std::placeholders::_1, std::placeholders::_2)
     );
 }
 
 SESSION_TEMPLATE_DECLARE
-void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::do_eof(shutdown_type type)
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_eof(shutdown_type type)
 {
     if (!m_connection.is_open()) {
         return;
@@ -314,7 +262,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::do_eof(shutdown_type type)
 }
 
 SESSION_TEMPLATE_DECLARE
-void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::do_process_request()
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_process_request()
 {
     request_type request = m_parser.release();
 
@@ -323,7 +271,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::do_process_request()
 }
 
 SESSION_TEMPLATE_DECLARE
-void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::provide(request_type &&request)
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::provide(request_type &&request)
 {
     boost::string_view target = request.target(); 
     method_type method = request.method();
@@ -350,14 +298,15 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::provide(request_type &&request
 
 SESSION_TEMPLATE_DECLARE
 template<class ResponseBody>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::do_write(response_type<ResponseBody> &response)
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_write(response_type<ResponseBody> &response)
 {
     using serializer_type = response_serializer_type<ResponseBody>;
+
     m_serializer = serializer_type(response);
     m_connection.async_write(
         std::any_cast<serializer_type &>(m_serializer),
         std::bind(
-            &flesh::on_write, 
+            &impl::on_write, 
             this->shared_from_this(),
             std::placeholders::_1,
             std::placeholders::_2,
@@ -367,7 +316,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::do_write(response_type<Respons
 }
 
 SESSION_TEMPLATE_DECLARE
-void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::on_write(boost::system::error_code ec, std::size_t bytes_transferred, bool close)
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_write(boost::system::error_code ec, std::size_t bytes_transferred, bool close)
 {
     static_cast<void>(bytes_transferred);
 
@@ -385,90 +334,73 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::flesh::on_write(boost::system::error_
 }
 
 SESSION_TEMPLATE_DECLARE
-template<class Flesh>
-session<SESSION_TEMPLATE_ATTRIBUTES>::context<Flesh>::context(Flesh &flesh)
-    : m_flesh{flesh.shared_from_this()}
+template<class Impl>
+session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::context(Impl &impl)
+    : m_impl{impl.shared_from_this()}
 {
-    assert(m_flesh != nullptr);
+    assert(m_impl != nullptr);
 }
 
 SESSION_TEMPLATE_DECLARE
-template<class Flesh>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Flesh>::recv() const
+template<class Impl>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv() const
 {
-    assert(m_flesh != nullptr);
+    assert(m_impl != nullptr);
     boost::asio::dispatch(
-        static_cast<base::strand_stream>(*m_flesh),
+        static_cast<base::strand_stream>(*m_impl),
         std::bind(
-            static_cast<Flesh &(Flesh::*)()>(&Flesh::recv),
-            m_flesh->shared_from_this()
+            static_cast<Impl &(Impl::*)()>(&Impl::recv),
+            m_impl->shared_from_this()
         )
     );
 }
 
 SESSION_TEMPLATE_DECLARE
-template<class Flesh>
+template<class Impl>
 template<class ResponseBody>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Flesh>::send(const response_type<ResponseBody> &response) const
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(const response_type<ResponseBody> &response) const
 {
-    assert(m_flesh != nullptr);
+    assert(m_impl != nullptr);
     boost::asio::dispatch(
-        static_cast<base::strand_stream &>(*m_flesh),
+        static_cast<base::strand_stream &>(*m_impl),
         std::bind(
-            static_cast<Flesh &(Flesh::*)(response_type<ResponseBody> &)>(&Flesh::send),
-            m_flesh->shared_from_this(),
+            static_cast<Impl &(Impl::*)(response_type<ResponseBody> &)>(&Impl::send),
+            m_impl->shared_from_this(),
             response
         )
     );
 }
 
 SESSION_TEMPLATE_DECLARE
-template<class Flesh>
-template<class Type>
-std::enable_if_t<std::is_reference_v<Type>, std::pair<bool, Type>>
-session<SESSION_TEMPLATE_ATTRIBUTES>::context<Flesh>::get_user_data()
+template<class Impl>
+bool session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::is_open() const
 {
-    using raw_type = std::decay_t<Type>;
-    static_assert(std::is_default_constructible_v<raw_type>);
-    static raw_type ret{};
-
-    if (!m_user_data.has_value()) {
-        return {false, ret};
-    }
-    
-    try {
-        return {true, std::any_cast<Type&>(m_user_data)};
-    } catch(const std::bad_any_cast &) { 
-        return {false, ret};
-    }
+    assert(m_impl != nullptr);
+    return m_impl->m_connection.is_open();
 }
 
 SESSION_TEMPLATE_DECLARE
-template<class Flesh>
+template<class Impl>
 template<class Type>
-std::enable_if_t<!std::is_reference_v<Type>, std::pair<bool, Type>>
-session<SESSION_TEMPLATE_ATTRIBUTES>::context<Flesh>::get_user_data()
+Type &session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_user_data() &
 {
-    using raw_type = std::decay_t<Type>;
-    static_assert(std::is_default_constructible_v<raw_type>);
-
-    if (!m_user_data.has_value()) {
-        return {false, Type{}};
-    }
-    
-    try {
-        return {true, std::any_cast<Type>(m_user_data)};
-    } catch (const std::bad_any_cast &) { 
-        return {false, Type{}};
-    }
+    return std::any_cast<Type &>(m_user_data);
 }
 
 SESSION_TEMPLATE_DECLARE
-template<class Flesh>
+template<class Impl>
 template<class Type>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Flesh>::set_user_data(Type &&data)
+Type &&session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_user_data() &&
 {
-    m_user_data = std::make_any<Type>(std::move(data));
+    return std::any_cast<Type &&>(std::move(m_user_data));
+}
+
+SESSION_TEMPLATE_DECLARE
+template<class Impl>
+template<class Type>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::set_user_data(Type &&data)
+{
+    m_user_data = std::make_any<Type>(std::forward<Type>(data));
 }
 
 } // namespace beast_router

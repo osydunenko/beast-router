@@ -74,8 +74,6 @@ private:
     endpoint_type m_endpoint;
 };
 
-using default_listener = listener<>;
-
 LISTENER_TEMPLATE_DECLARE
 template<class ...OnAction>
 auto listener<LISTENER_TEMPLATE_ATTRIBUTES>::launch(boost::asio::io_context &ctx, const endpoint_type &endpoint, const OnAction &...on_action)

@@ -4,12 +4,11 @@
 
 #define LOCKABLE_ENTER_TO_READ(shared_mutex) \
     const auto &dummy_lock = beast_router::base::lockable::enter_to_read(shared_mutex); \
-    (void)dummy_lock;
+    static_cast<void>(dummy_lock);
 
 #define LOCKABLE_ENTER_TO_WRITE(shared_mutex) \
     const auto &dummy_lock = beast_router::base::lockable::enter_to_write(shared_mutex); \
-    (void)dummy_lock;
-
+    static_cast<void>(dummy_lock);
 
 namespace beast_router {
 namespace base {
