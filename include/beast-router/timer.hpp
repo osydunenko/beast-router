@@ -14,6 +14,8 @@
 
 namespace beast_router {
 
+using namespace std::chrono_literals;
+
 template<
     class CompletionExecutor, 
     class Timer
@@ -25,9 +27,11 @@ public:
 
     using asio_timer_type = Timer;
 
-    using time_point_type = typename asio_timer_type::clock_type::time_point;
+    using clock_type = typename asio_timer_type::clock_type;
 
-    using duration_type = typename asio_timer_type::clock_type::duration;
+    using time_point_type = typename clock_type::time_point;
+
+    using duration_type = typename clock_type::duration;
 
     explicit timer(const CompletionExecutor &executor);
     timer(const self_type &) = delete;

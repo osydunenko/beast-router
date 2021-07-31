@@ -11,9 +11,12 @@ namespace base {
 namespace cb {
 namespace detail {
 
-template<bool...> struct bool_pack;
-template<bool...v>
-using all_true = std::is_same<bool_pack<true, v...>, bool_pack<v..., true>>;
+template<bool ...> struct bool_pack;
+template<bool ...V>
+using all_true = std::is_same<bool_pack<true, V...>, bool_pack<V..., true>>;
+
+template<bool ...V>
+constexpr bool all_true_v = all_true<V...>::value;
 
 template<class Tuple, class Func, std::size_t ...Idxs>
 void tuple_func_idx(std::size_t idx, const Tuple &tuple, std::index_sequence<Idxs...>, Func &&func)
@@ -77,9 +80,9 @@ public:
     template<
         class ...OnRequest,
         typename = std::enable_if_t<
-            detail::all_true<
+            detail::all_true_v<
                 std::is_invocable_v<OnRequest, const request_type &, context_type &, const std::smatch &>...
-            >::value && sizeof...(OnRequest) >= 1
+            > && sizeof...(OnRequest) >= 1
         >
     >
     storage(OnRequest &&...on_request)

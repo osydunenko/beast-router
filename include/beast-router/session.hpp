@@ -7,20 +7,20 @@
 #include <type_traits>
 
 #include <boost/beast/http/string_body.hpp>
-#include <boost/beast/http/parser.hpp>
-#include <boost/beast/http/serializer.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/dispatch.hpp>
+#include <boost/beast/http/serializer.hpp>
+#include <boost/beast/http/parser.hpp>
 #include <boost/asio/socket_base.hpp>
+#include <boost/asio/dispatch.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 #include "base/strand_stream.hpp"
+#include "base/conn_queue.hpp"
 #include "base/lockable.hpp"
 #include "base/cb.hpp"
-#include "base/conn_queue.hpp"
 #include "connection.hpp"
-#include "timer.hpp"
 #include "router.hpp"
+#include "timer.hpp"
 
 #define SESSION_TEMPLATE_ATTRIBUTES \
     Body, RequestParser, Buffer, Protocol, Socket
@@ -47,9 +47,6 @@ template<class T>
 constexpr bool is_chrono_duration_v = is_chrono_duration<T>::value;
 
 } // namespace details
-
-
-using std::declval;
 
 template<
     class Body = boost::beast::http::string_body,
@@ -118,17 +115,14 @@ public:
     static context_type recv(socket_type &&socket, const router_type &router, OnAction &&...onAction);
 
     template<class TimeDuration, class ...OnAction>
-    // TODO: move the templated TimeDuration check on ctx.recv()
-    static typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>, context_type>
-    recv(socket_type &&socket, const router_type &router, TimeDuration duration, OnAction &&...onAction);
+    static context_type recv(socket_type &&socket, const router_type &router, TimeDuration &&duration, OnAction &&...onAction);
 
 private:
 
     template<class ...OnAction>
     static context_type init_context(socket_type &&socket, const router_type &router, OnAction &&...onAction);
 
-    class impl: public base::strand_stream,
-        public std::enable_shared_from_this<impl>
+    class impl: public base::strand_stream, public std::enable_shared_from_this<impl>
     {
         template<class>
         friend class context;
@@ -149,7 +143,9 @@ private:
         self_type &recv(timer_duration_type duration);
 
         template<class ResponseBody>
-        self_type &send(response_type<ResponseBody> &response);
+        self_type &send(const response_type<ResponseBody> &response);
+        template<class ResponseBody>
+        self_type &send(const response_type<ResponseBody> &response, timer_duration_type duration);
 
     private:
         void do_timer(timer_duration_type duraion);
@@ -186,10 +182,17 @@ public:
         context(Impl &impl);
 
         void recv();
-        void recv(timer_duration_type duration);
+
+        template<class TimeDuration>
+        typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>> 
+        recv(TimeDuration &&duration);
 
         template<class ResponseBody>
         void send(const response_type<ResponseBody> &response) const;
+
+        template<class ResponseBody, class TimeDuration>
+        typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>>
+        send(const response_type<ResponseBody> &response, TimeDuration &&duration) const;
 
         bool is_open() const;
         
@@ -213,7 +216,6 @@ template<class ...OnAction>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
 session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_type &router, OnAction &&...onAction)
 {
-
     context_type ctx = init_context(std::move(socket), router, std::forward<OnAction>(onAction)...);
     ctx.recv();
     return ctx;
@@ -221,11 +223,11 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_ty
 
 SESSION_TEMPLATE_DECLARE
 template<class TimeDuration, class ...OnAction>
-typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>, typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type>
-session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_type &router, TimeDuration duration, OnAction &&...onAction)
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
+session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_type &router, TimeDuration &&duration, OnAction &&...onAction)
 {
     context_type ctx = init_context(std::move(socket), router, std::forward<OnAction>(onAction)...);
-    ctx.recv(std::chrono::duration_cast<timer_duration_type>(std::move(duration)));
+    ctx.recv(std::forward<TimeDuration>(duration));
     return ctx;
 }
 
@@ -281,8 +283,18 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::impl::recv(timer_duration_type duration)
 SESSION_TEMPLATE_DECLARE
 template<class ResponseBody>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &
-        session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(response_type<ResponseBody> &response)
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(const response_type<ResponseBody> &response)
 {
+    m_queue(response);
+    return *this;
+}
+
+SESSION_TEMPLATE_DECLARE
+template<class ResponseBody>
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(const response_type<ResponseBody> &response, timer_duration_type duration)
+{
+    do_timer(std::move(duration));
     m_queue(response);
     return *this;
 }
@@ -302,7 +314,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_timer(boost::system::error_c
         return;
     }
 
-    if (m_timer.expiry() <= std::chrono::steady_clock::now()) {
+    if (m_timer.expiry() <= timer_type::clock_type::now()) {
         do_eof(shutdown_type::shutdown_both);
     }
 }
@@ -440,7 +452,9 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv()
 
 SESSION_TEMPLATE_DECLARE
 template<class Impl>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(timer_duration_type duration)
+template<class TimeDuration>
+typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>>
+session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(TimeDuration &&duration)
 {
     assert(m_impl != nullptr);
     boost::asio::dispatch(
@@ -448,7 +462,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(timer_duration_ty
         std::bind(
             static_cast<Impl &(Impl::*)(timer_duration_type)>(&Impl::recv),
             m_impl->shared_from_this(),
-            std::move(duration)
+            std::chrono::duration_cast<timer_duration_type>(std::forward<TimeDuration>(duration))
         )
     );
 }
@@ -462,9 +476,26 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(const response_ty
     boost::asio::dispatch(
         static_cast<base::strand_stream &>(*m_impl),
         std::bind(
-            static_cast<Impl &(Impl::*)(response_type<ResponseBody> &)>(&Impl::send),
+            static_cast<Impl &(Impl::*)(const response_type<ResponseBody> &)>(&Impl::send),
             m_impl->shared_from_this(),
             response
+        )
+    );
+}
+
+SESSION_TEMPLATE_DECLARE
+template<class Impl>
+template<class ResponseBody, class TimeDuration>
+typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>>
+session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(const response_type<ResponseBody> &response, TimeDuration &&duration) const
+{
+    assert(m_impl != nullptr);
+    boost::asio::dispatch(
+        static_cast<base::strand_stream &>(*m_impl),
+        std::bind(
+            static_cast<Impl &(Impl::*)(const response_type<ResponseBody> &, timer_duration_type)>(&Impl::send),
+            m_impl->shared_from_this(),
+            response, std::chrono::duration_cast<timer_duration_type>(std::forward<TimeDuration>(duration))
         )
     );
 }

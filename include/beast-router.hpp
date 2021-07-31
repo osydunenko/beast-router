@@ -7,10 +7,9 @@
 #include "beast-router/listener.hpp"
 #include "beast-router/session.hpp"
 #include "beast-router/router.hpp"
+#include "beast-router/timer.hpp"
 
 namespace beast_router {
-
-using namespace std::chrono_literals;
 
 using http_listener = listener<>;
 using http_session = session<>;
