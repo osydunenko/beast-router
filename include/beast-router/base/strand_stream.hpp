@@ -8,8 +8,6 @@ namespace base {
 
 struct strand_stream: boost::asio::strand<boost::asio::system_timer::executor_type>
 {
-    using timer_type = boost::asio::system_timer;
-
     using asio_type = boost::asio::strand<boost::asio::system_timer::executor_type>;
 
     strand_stream(const boost::asio::system_timer::executor_type &executor)

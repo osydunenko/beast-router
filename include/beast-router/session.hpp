@@ -18,6 +18,7 @@
 #include "base/cb.hpp"
 #include "base/conn_queue.hpp"
 #include "connection.hpp"
+#include "timer.hpp"
 #include "router.hpp"
 
 #define SESSION_TEMPLATE_ATTRIBUTES \
@@ -69,8 +70,6 @@ public:
 
     using socket_type = Socket;
 
-    using timer_type = base::strand_stream::timer_type;
-
     using mutex_type = base::lockable::mutex_type;
 
     using impl_type = impl;
@@ -78,6 +77,8 @@ public:
     using context_type = context<impl_type>;
 
     using connection_type = connection<socket_type, base::strand_stream::asio_type>;
+
+    using timer_type = timer<base::strand_stream::asio_type, boost::asio::steady_timer>;
 
     using on_error_type = std::function<void(boost::system::error_code, boost::string_view)>;
 
@@ -135,6 +136,7 @@ private:
 
     private:
         connection_type m_connection;
+        timer_type m_timer;
         mutex_type &m_mutex;
         buffer_type m_buffer;
         request_parser_type m_parser;
@@ -142,9 +144,6 @@ private:
         on_error_type m_on_error;
         conn_queue_type m_queue;
         std::any m_serializer;
-
-        // TODO: Implement timer
-        base::strand_stream::timer_type m_timer;
     };
 
 public:
@@ -154,7 +153,7 @@ public:
     public:
         context(Impl &impl);
 
-        void recv() const;
+        void recv();
 
         template<class ResponseBody>
         void send(const response_type<ResponseBody> &response) const;
@@ -168,7 +167,7 @@ public:
         Type &&get_user_data() &&;
 
         template<class Type>
-        void set_user_data(Type &&data);
+        void set_user_data(Type data);
 
     private:
         std::shared_ptr<Impl> m_impl;
@@ -199,6 +198,7 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::impl::impl(socket_type &&socket, mutex_typ
     const on_error_type &on_error)
     : base::strand_stream{socket.get_executor()}
     , m_connection{std::move(socket), static_cast<base::strand_stream &>(*this)}
+    , m_timer{static_cast<base::strand_stream &>(*this)}
     , m_mutex{mutex}
     , m_buffer{std::move(buffer)}
     , m_parser{}
@@ -206,8 +206,6 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::impl::impl(socket_type &&socket, mutex_typ
     , m_on_error{on_error}
     , m_queue{*this}
     , m_serializer{}
-    , m_timer{base::strand_stream::get_inner_executor(), 
-        timer_type::time_point::max()}
 {
 }
 
@@ -343,7 +341,7 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::context(Impl &impl)
 
 SESSION_TEMPLATE_DECLARE
 template<class Impl>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv() const
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv()
 {
     assert(m_impl != nullptr);
     boost::asio::dispatch(
@@ -398,9 +396,9 @@ Type &&session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_user_data() &&
 SESSION_TEMPLATE_DECLARE
 template<class Impl>
 template<class Type>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::set_user_data(Type &&data)
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::set_user_data(Type data)
 {
-    m_user_data = std::make_any<Type>(std::forward<Type>(data));
+    m_user_data = std::make_any<Type>(std::move(data));
 }
 
 } // namespace beast_router
