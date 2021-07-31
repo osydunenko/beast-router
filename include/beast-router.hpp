@@ -1,7 +1,6 @@
 #pragma once
 
 #include <thread>
-
 #include <boost/asio/signal_set.hpp>
 #include <boost/beast/http/message.hpp>
 
@@ -10,6 +9,8 @@
 #include "beast-router/router.hpp"
 
 namespace beast_router {
+
+using namespace std::chrono_literals;
 
 using http_listener = listener<>;
 using http_session = session<>;

@@ -1,8 +1,9 @@
 #pragma once
 
-#include <regex>
-#include <algorithm>
 #include <any>
+#include <regex>
+#include <chrono>
+#include <algorithm>
 #include <type_traits>
 
 #include <boost/beast/http/string_body.hpp>
@@ -34,6 +35,21 @@
     >
 
 namespace beast_router {
+namespace details {
+
+template<class T>
+struct is_chrono_duration: std::false_type {};
+
+template<class Rep, class Period>
+struct is_chrono_duration<std::chrono::duration<Rep, Period>>: std::true_type {};
+
+template<class T>
+constexpr bool is_chrono_duration_v = is_chrono_duration<T>::value;
+
+} // namespace details
+
+
+using std::declval;
 
 template<
     class Body = boost::beast::http::string_body,
@@ -80,6 +96,8 @@ public:
 
     using timer_type = timer<base::strand_stream::asio_type, boost::asio::steady_timer>;
 
+    using timer_duration_type = typename timer_type::duration_type;
+
     using on_error_type = std::function<void(boost::system::error_code, boost::string_view)>;
 
     using shutdown_type = typename socket_type::shutdown_type;
@@ -97,9 +115,17 @@ public:
     using conn_queue_type = base::conn_queue<impl_type>;
 
     template<class ...OnAction>
-    static context_type recv(socket_type &&socket, const router_type &router, const OnAction &...onAction);
+    static context_type recv(socket_type &&socket, const router_type &router, OnAction &&...onAction);
+
+    template<class TimeDuration, class ...OnAction>
+    // TODO: move the templated TimeDuration check on ctx.recv()
+    static typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>, context_type>
+    recv(socket_type &&socket, const router_type &router, TimeDuration duration, OnAction &&...onAction);
 
 private:
+
+    template<class ...OnAction>
+    static context_type init_context(socket_type &&socket, const router_type &router, OnAction &&...onAction);
 
     class impl: public base::strand_stream,
         public std::enable_shared_from_this<impl>
@@ -120,11 +146,14 @@ private:
             const on_error_type &on_error);
 
         self_type &recv();
+        self_type &recv(timer_duration_type duration);
 
         template<class ResponseBody>
         self_type &send(response_type<ResponseBody> &response);
 
     private:
+        void do_timer(timer_duration_type duraion);
+        void on_timer(boost::system::error_code ec);
         void do_read();
         void on_read(boost::system::error_code ec, size_t bytes_transferred);
         void do_eof(shutdown_type type);
@@ -150,10 +179,14 @@ public:
     template<class Impl>
     class context
     {
+        static_assert(std::is_base_of_v<
+            boost::asio::strand<boost::asio::system_timer::executor_type>, Impl>);
+
     public:
         context(Impl &impl);
 
         void recv();
+        void recv(timer_duration_type duration);
 
         template<class ResponseBody>
         void send(const response_type<ResponseBody> &response) const;
@@ -178,18 +211,37 @@ public:
 SESSION_TEMPLATE_DECLARE
 template<class ...OnAction>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
-session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_type &router, const OnAction &...onAction)
+session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_type &router, OnAction &&...onAction)
 {
-    buffer_type buffer;
-    context_type ctx(*std::make_shared<impl_type>(
-                    std::move(socket), 
-                    router.get_mutex(), 
-                    std::move(buffer),
-                    router.get_resource_map(),
-                    onAction...)
-    );
+
+    context_type ctx = init_context(std::move(socket), router, std::forward<OnAction>(onAction)...);
     ctx.recv();
     return ctx;
+}
+
+SESSION_TEMPLATE_DECLARE
+template<class TimeDuration, class ...OnAction>
+typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>, typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type>
+session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_type &router, TimeDuration duration, OnAction &&...onAction)
+{
+    context_type ctx = init_context(std::move(socket), router, std::forward<OnAction>(onAction)...);
+    ctx.recv(std::chrono::duration_cast<timer_duration_type>(std::move(duration)));
+    return ctx;
+}
+
+SESSION_TEMPLATE_DECLARE
+template<class ...OnAction>
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
+session<SESSION_TEMPLATE_ATTRIBUTES>::init_context(socket_type &&socket, const router_type &router, OnAction &&...onAction)
+{
+    buffer_type buffer;
+    return context_type{*std::make_shared<impl_type>(
+        std::move(socket), 
+        router.get_mutex(), 
+        std::move(buffer),
+        router.get_resource_map(),
+        std::forward<OnAction>(onAction)...)
+    };
 }
 
 SESSION_TEMPLATE_DECLARE
@@ -210,23 +262,64 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::impl::impl(socket_type &&socket, mutex_typ
 }
 
 SESSION_TEMPLATE_DECLARE
-typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &session<SESSION_TEMPLATE_ATTRIBUTES>::impl::recv()
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::recv()
 {
     do_read();
     return *this;
 }
 
 SESSION_TEMPLATE_DECLARE
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::recv(timer_duration_type duration)
+{
+    do_timer(std::move(duration));
+    do_read();
+    return *this;
+}
+
+SESSION_TEMPLATE_DECLARE
 template<class ResponseBody>
-typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(response_type<ResponseBody> &response)
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &
+        session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(response_type<ResponseBody> &response)
 {
     m_queue(response);
     return *this;
 }
 
 SESSION_TEMPLATE_DECLARE
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_timer(timer_duration_type duration)
+{
+    m_timer.expires_from_now(std::move(duration));
+    m_timer.async_wait(std::bind(&impl::on_timer, this->shared_from_this(), std::placeholders::_1));
+}
+
+SESSION_TEMPLATE_DECLARE
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_timer(boost::system::error_code ec)
+{
+    if (ec && ec != boost::asio::error::operation_aborted) {
+        m_on_error(ec, "async_timer/on_timer");
+        return;
+    }
+
+    if (m_timer.expiry() <= std::chrono::steady_clock::now()) {
+        do_eof(shutdown_type::shutdown_both);
+    }
+}
+
+SESSION_TEMPLATE_DECLARE
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_read()
+{
+    m_connection.async_read(m_buffer, m_parser,
+        std::bind(&impl::on_read, this->shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+    );
+}
+
+SESSION_TEMPLATE_DECLARE
 void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_read(boost::system::error_code ec, size_t bytes_transferred)
 {
+    m_timer.cancel();
+    static_cast<void>(bytes_transferred);
     if (ec == boost::beast::http::error::end_of_stream) {
         do_eof(shutdown_type::shutdown_both);
         return;
@@ -237,14 +330,6 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_read(boost::system::error_co
     }
 
     do_process_request();
-}
-
-SESSION_TEMPLATE_DECLARE
-void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_read()
-{
-    m_connection.async_read(m_buffer, m_parser,
-        std::bind(&impl::on_read, this->shared_from_this(), std::placeholders::_1, std::placeholders::_2)
-    );
 }
 
 SESSION_TEMPLATE_DECLARE
@@ -349,6 +434,21 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv()
         std::bind(
             static_cast<Impl &(Impl::*)()>(&Impl::recv),
             m_impl->shared_from_this()
+        )
+    );
+}
+
+SESSION_TEMPLATE_DECLARE
+template<class Impl>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(timer_duration_type duration)
+{
+    assert(m_impl != nullptr);
+    boost::asio::dispatch(
+        static_cast<base::strand_stream>(*m_impl),
+        std::bind(
+            static_cast<Impl &(Impl::*)(timer_duration_type)>(&Impl::recv),
+            m_impl->shared_from_this(),
+            std::move(duration)
         )
     );
 }

@@ -35,8 +35,8 @@ public:
     timer(self_type &&) = delete;
     self_type &operator=(self_type &&) = delete;
 
-    std::size_t expires_at(const time_point_type &expire_time);
     std::size_t expires_from_now(const duration_type &expire_time);
+    time_point_type expiry() const;
 
     boost::system::error_code cancel();
 
@@ -55,15 +55,15 @@ timer<TIMER_TEMPLATE_ATTRIBUTES>::timer(const CompletionExecutor &executor)
 {}
 
 TIMER_TEMPLATE_DECLARE
-std::size_t timer<TIMER_TEMPLATE_ATTRIBUTES>::expires_at(const time_point_type &expire_time)
-{
-    return m_timer.expires_at(expire_time);
-}
-
-TIMER_TEMPLATE_DECLARE
 std::size_t timer<TIMER_TEMPLATE_ATTRIBUTES>::expires_from_now(const duration_type &expire_time)
 {
     return m_timer.expires_from_now(expire_time);
+}
+
+TIMER_TEMPLATE_DECLARE
+typename timer<TIMER_TEMPLATE_ATTRIBUTES>::time_point_type timer<TIMER_TEMPLATE_ATTRIBUTES>::expiry() const
+{
+    return m_timer.expiry();
 }
 
 TIMER_TEMPLATE_DECLARE
@@ -83,7 +83,7 @@ template<class Function>
 void timer<TIMER_TEMPLATE_ATTRIBUTES>::async_wait(Function &&func)
 {
     static_assert(std::is_invocable_v<Function, boost::system::error_code>);
-    m_timer->async_wait(
+    m_timer.async_wait(
         boost::asio::bind_executor(
             m_executor, std::forward<Function>(func)
         )

@@ -30,6 +30,7 @@ public:
     self_type &operator=(const self_type &) = delete;
     connection(self_type &&) = delete;
     self_type &operator=(self_type &&) = delete;
+    ~connection();
 
     template <class Function, class Serializer>
     void async_write(Serializer &serializer, Function &&func);
@@ -52,6 +53,14 @@ connection<CONNECTION_TEMPLATE_ATTRIBUTES>::connection(Socket &&socket, const Co
     : m_socket{std::move(socket)}
     , m_complition_executor{executor}
 {
+}
+
+CONNECTION_TEMPLATE_DECLARE
+connection<CONNECTION_TEMPLATE_ATTRIBUTES>::~connection()
+{
+    if (is_open()) {
+        shutdown(shutdown_type::shutdown_both);
+    }
 }
 
 CONNECTION_TEMPLATE_DECLARE
