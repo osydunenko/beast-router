@@ -18,9 +18,9 @@
 #include "base/conn_queue.hpp"
 #include "base/lockable.hpp"
 #include "base/cb.hpp"
-#include "connection.hpp"
+#include "common/connection.hpp"
+#include "common/timer.hpp"
 #include "router.hpp"
-#include "timer.hpp"
 
 #define SESSION_TEMPLATE_ATTRIBUTES \
     Body, RequestParser, Buffer, Protocol, Socket

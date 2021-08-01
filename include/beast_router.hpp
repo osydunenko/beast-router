@@ -4,10 +4,9 @@
 #include <boost/asio/signal_set.hpp>
 #include <boost/beast/http/message.hpp>
 
-#include "beast-router/listener.hpp"
-#include "beast-router/session.hpp"
-#include "beast-router/router.hpp"
-#include "beast-router/timer.hpp"
+#include "beast_router/listener.hpp"
+#include "beast_router/session.hpp"
+#include "beast_router/router.hpp"
 
 namespace beast_router {
 

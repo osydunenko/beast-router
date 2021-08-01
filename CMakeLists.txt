@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(beast-router)
+project(beast_router)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -37,7 +37,7 @@ target_link_libraries(
 add_custom_target(
     doc
     COMMAND ${DOXYGEN_PATH} ${PROJECT_SOURCE_DIR}/Doxyfile
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/include/beast-router/
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/include/beast_router/
     COMMENT "Generating API Documentation"
     VERBATIM
 )

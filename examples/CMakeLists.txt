@@ -12,7 +12,7 @@ foreach(ex_src ${SRCS})
     target_link_libraries(
         ${ex_name}
         PRIVATE
-            beast-router::beast-router
+            beast_router::beast_router
     )
 
 endforeach()
