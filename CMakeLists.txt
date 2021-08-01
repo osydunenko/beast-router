@@ -37,7 +37,6 @@ if (DOXYGEN_FOUND)
     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
     set(DOXYGEN_OUT ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile)
     set(DOXYGEN_DOC_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/doc)
-    message("!!!!! ${DOXYGEN_OUT}")
 
     # configure the file
     configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
