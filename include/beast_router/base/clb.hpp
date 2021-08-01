@@ -8,7 +8,7 @@
 
 namespace beast_router {
 namespace base { 
-namespace cb {
+namespace clb {
 namespace details {
 
 template<bool ...> struct bool_pack;
@@ -84,12 +84,12 @@ public:
         >
     >
     storage(OnRequest &&...on_request)
-        : m_cbs{}
+        : m_clbs{}
     {
         auto tuple = std::make_tuple(std::forward<OnRequest>(on_request)...);
         constexpr auto size = std::tuple_size<decltype(tuple)>::value;
 
-        m_cbs.reserve(size);
+        m_clbs.reserve(size);
 
         for (size_t idx = 0; idx < size; ++idx) {
             details::tuple_func_idx(
@@ -97,7 +97,7 @@ public:
                 tuple,
                 std::make_index_sequence<size>{},
                 [&](auto entry) -> bool {
-                    m_cbs.push_back(
+                    m_clbs.push_back(
                         std::make_unique<callback_impl<decltype(entry)>>(entry)
                     );
                     return true;
@@ -108,13 +108,13 @@ public:
 
     size_t size() const
     {
-        return m_cbs.size();
+        return m_clbs.size();
     }
 
     void begin_execute(const request_type &request, context_type &&ctx, std::smatch &&match)
     {
-        for (size_t idx = 0; idx < m_cbs.size(); ++idx) {
-            if (!(*m_cbs[idx])(request, ctx, match)) {
+        for (size_t idx = 0; idx < m_clbs.size(); ++idx) {
+            if (!(*m_clbs[idx])(request, ctx, match)) {
                 break;
             }
         }
@@ -155,9 +155,9 @@ private:
         std::function<return_type(const request_type &, context_type &, const std::smatch &)> m_func;
     };
 
-    container_type m_cbs;
+    container_type m_clbs;
 };
 
-} // namespace cb
+} // namespace clb
 } // namespace base
 } // namespace beast_router

@@ -17,7 +17,7 @@
 #include "base/strand_stream.hpp"
 #include "base/conn_queue.hpp"
 #include "base/lockable.hpp"
-#include "base/cb.hpp"
+#include "base/clb.hpp"
 #include "common/connection.hpp"
 #include "common/timer.hpp"
 #include "router.hpp"
@@ -92,7 +92,7 @@ public:
 
     using method_type = boost::beast::http::verb;
 
-    using storage_type = base::cb::storage<self_type>;
+    using storage_type = base::clb::storage<self_type>;
 
     using resource_map_type = std::unordered_map<std::string, storage_type>; 
 
