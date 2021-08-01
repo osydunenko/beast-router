@@ -44,4 +44,4 @@ private:
 
 } // namespace beast_router
 
-#include "../impl/common/connection.hpp"
+#include "impl/connection.hpp"

@@ -9,7 +9,7 @@
 namespace beast_router {
 namespace base { 
 namespace cb {
-namespace detail {
+namespace details {
 
 template<bool ...> struct bool_pack;
 template<bool ...V>
@@ -51,7 +51,7 @@ struct func_traits<R(*)(Args...)>
     using return_type = R;
 };
 
-} // namespace detail
+} // namespace details
 
 template<
     class Session 
@@ -60,8 +60,6 @@ class storage
 {
     struct callback; 
 
-    template<class Func>
-    struct callback_impl;
 public:
     using self_type = storage<Session>;
 
@@ -80,7 +78,7 @@ public:
     template<
         class ...OnRequest,
         typename = std::enable_if_t<
-            detail::all_true_v<
+            details::all_true_v<
                 std::is_invocable_v<OnRequest, const request_type &, context_type &, const std::smatch &>...
             > && sizeof...(OnRequest) >= 1
         >
@@ -94,7 +92,7 @@ public:
         m_cbs.reserve(size);
 
         for (size_t idx = 0; idx < size; ++idx) {
-            detail::tuple_func_idx(
+            details::tuple_func_idx(
                 idx,
                 tuple,
                 std::make_index_sequence<size>{},
@@ -132,7 +130,7 @@ private:
     template<class Func>
     struct callback_impl: callback
     {
-        using return_type = typename detail::func_traits<Func>::return_type;
+        using return_type = typename details::func_traits<Func>::return_type;
 
         callback_impl(Func func)
         {

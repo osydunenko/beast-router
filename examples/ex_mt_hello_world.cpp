@@ -44,7 +44,7 @@ int main()
     const auto address = boost::asio::ip::address_v4::any();
     const auto port = static_cast<unsigned short>(8081);
 
-    http_listener::launch(g_ioc, {address, port}, on_accept, on_error);
+    http_listener::launch(g_ioc, {address, port}, std::move(on_accept), std::move(on_error));
     sig_int_term.async_wait([](const boost::system::error_code &, int){
         g_ioc.stop();
     });
