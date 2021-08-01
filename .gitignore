@@ -5,6 +5,8 @@ doc/*
 
 CMakeLists.txt.user
 
+Doxyfile
+
 # Prerequisites
 *.d
 
