@@ -253,7 +253,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv()
 SESSION_TEMPLATE_DECLARE
 template<class Impl>
 template<class TimeDuration>
-typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>>
+typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
 session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(TimeDuration &&duration)
 {
     assert(m_impl != nullptr);
@@ -286,7 +286,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(const response_ty
 SESSION_TEMPLATE_DECLARE
 template<class Impl>
 template<class ResponseBody, class TimeDuration>
-typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>>
+typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
 session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(const response_type<ResponseBody> &response, TimeDuration &&duration) const
 {
     assert(m_impl != nullptr);

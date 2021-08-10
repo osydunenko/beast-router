@@ -7,14 +7,14 @@ using namespace std;
 using namespace boost;
 using namespace beast_router;
 
-/// Global request counter
+/// Global requests counter
 static atomic<uint64_t> counter{0};
 
 /// Global ip address
-static auto address = boost::asio::ip::address_v4::any();
+static const auto address = boost::asio::ip::address_v4::any();
 
 /// Global port to start listening on
-static auto port = static_cast<unsigned short>(8081);
+static const auto port = static_cast<unsigned short>(8081);
 
 /// Global io_context
 static asio::io_context ioc;
@@ -42,8 +42,8 @@ int main(int argc, char **argv)
         ctx.send(rp);
     };
 
-    /// Add the above callback and attach to all the possible requests patterns
-    ::router.get(R"(^/.*$)", std::move(clb));
+    /// Add the above callback and link to all the possible requests patterns
+    ::router.get(R"(^.*$)", std::move(clb));
 
     /// Define callbacks for the listener
     http_listener::on_error_type on_error = [](system::error_code ec, boost::string_view v) {
@@ -51,7 +51,6 @@ int main(int argc, char **argv)
             ec == system::errc::permission_denied)
             ioc.stop();
     };
-
     http_listener::on_accept_type on_accept = [&on_error](http_listener::socket_type socket) {
         http_session::recv(std::move(socket), ::router, 5s, on_error);
     };
@@ -67,7 +66,7 @@ int main(int argc, char **argv)
     /// Get number of available processors
     auto processor_count = thread::hardware_concurrency();
 
-    /// Creates the respective to number of processors threads and start to process connections
+    /// Create threads where size is eq. to the number of CPUs
     std::vector<std::thread> threads;
     for (decltype(processor_count) i = 0; i < processor_count; ++i) {
         threads.emplace_back(

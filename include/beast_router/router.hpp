@@ -11,7 +11,7 @@ namespace beast_router {
  * The common class which provides the basic routing features 
  * e.g. get(), put(), post() and delete_() handling.<br>
  * By using RegExp it stores and maps the corresponding executors 
- * given by invoking the respective attached methods.
+ * given by invoking the respective linked methods.
  *
  * ### Example
  * ```cpp
@@ -39,31 +39,31 @@ template<class Session>
 class router
 {
 public:
-    /// Typedef referencing to self
+    /// The self type
     using self_type = router<Session>;
 
-    /// Typedef referencing to Session
+    /// The session type
     using session_type = Session;
 
-    /// Typedef referencing to mutex
+    /// The mutex type
     using mutex_type = typename base::lockable::mutex_type;
 
-    /// Typedef referencing to resource map which holds handlers groupped by methods
+    /// The container type associated with the callbacks linked to the resource
     using resource_map_type = typename session_type::resource_map_type;
 
-    /// Typedef referencing to the method type
+    /// The mothod type
     using method_type = typename session_type::method_type;
 
-    /// Typedef referencing to the methods map type
+    /// The container type associated with the resource map
     using method_map_type = typename session_type::method_map_type;
 
-    /// Typedef referencing to the storage type
+    /// The storage type holds a callback
     using storage_type = typename session_type::storage_type;
 
-    /// Typedef referencing pointer to the methode map type
+    /// The pointer type for the method_map_type
     using method_map_pointer = std::shared_ptr<method_map_type>;
 
-    /// Typedef referencinf the const pointer to the method map type
+    /// The const pointer fpr the method_map_type
     using method_const_map_pointer = std::shared_ptr<const method_map_type>;
 
     router();
@@ -71,6 +71,7 @@ public:
     /// Returns a reference to the `mutex_type`
     /**
      * This function is used to get the mutex for further usage and controlling the critical sections
+     * along with this routing functionality
      *
      * @returns mutex_type
      */
@@ -82,7 +83,7 @@ public:
      * HTTP method is equal to `"GET"`.
      * The method is instantiated under the following conditions:
      * - `template<class ...OnRequest>` carries the list of executables routines
-     * - the methods comply to the signature and may be passed as a parameter for the `sorage` creation
+     * - the methods comply and respect the signature and may be passed as a parameter for the `sorage` creation
      *
      * ```cpp
      * std::is_invocable_v<OnRequest, const request_type &, context_type &, const std::smatch &>
@@ -149,4 +150,4 @@ private:
 
 } // namespace beast_router
 
-#include "impl/router.hpp"
+#include "impl/router.ipp"

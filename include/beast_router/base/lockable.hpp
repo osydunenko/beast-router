@@ -13,6 +13,7 @@
 namespace beast_router {
 namespace base {
 
+/// Provides a locking functionality and critical sections handling
 struct lockable
 {
     using mutex_type = std::shared_mutex;

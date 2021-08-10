@@ -1,58 +1,17 @@
 #pragma once
 
 #include <functional>
-#include <type_traits>
 #include <vector>
 #include <regex>
 #include <tuple>
 
+#include "../common/utility.hpp"
+
 namespace beast_router {
 namespace base { 
 namespace clb {
-namespace details {
 
-template<bool ...> struct bool_pack;
-template<bool ...V>
-using all_true = std::is_same<bool_pack<true, V...>, bool_pack<V..., true>>;
-
-template<bool ...V>
-constexpr bool all_true_v = all_true<V...>::value;
-
-template<class Tuple, class Func, std::size_t ...Idxs>
-void tuple_func_idx(std::size_t idx, const Tuple &tuple, std::index_sequence<Idxs...>, Func &&func)
-{
-    [](...){}(
-        (idx == Idxs && std::forward<Func>(func)(std::get<Idxs>(tuple)))...
-    );
-}
-
-template<class T>
-struct func_traits
-{
-    using decayed_type = std::decay_t<T>;
-    using return_type = typename func_traits<decltype(&decayed_type::operator())>::return_type;
-};
-
-template<class C, class R, class ...Args>
-struct func_traits<R(C::*)(Args...) const>
-{
-    using return_type = R;
-};
-
-template<class C, class R, class ...Args>
-struct func_traits<R(C::*)(Args...)>
-{
-    using return_type = R;
-};
-
-template<class R, class ...Args>
-struct func_traits<R(*)(Args...)>
-{
-    using return_type = R;
-};
-
-} // namespace details
-
+/// Encapsulates and stores callbacks associated with resources 
 template<
     class Session 
 >
@@ -78,7 +37,7 @@ public:
     template<
         class ...OnRequest,
         typename = std::enable_if_t<
-            details::all_true_v<
+            utility::is_all_true_v<
                 std::is_invocable_v<OnRequest, const request_type &, context_type &, const std::smatch &>...
             > && sizeof...(OnRequest) >= 1
         >
@@ -92,7 +51,7 @@ public:
         m_clbs.reserve(size);
 
         for (size_t idx = 0; idx < size; ++idx) {
-            details::tuple_func_idx(
+            utility::tuple_func_idx(
                 idx,
                 tuple,
                 std::make_index_sequence<size>{},
@@ -130,7 +89,7 @@ private:
     template<class Func>
     struct callback_impl: callback
     {
-        using return_type = typename details::func_traits<Func>::return_type;
+        using return_type = utility::func_traits_result_t<Func>;
 
         callback_impl(Func func)
         {

@@ -15,9 +15,11 @@
 
 namespace beast_router {
 
-/// Listens on the incoming connections.
+/// Listens and accepts the incoming connections.
 /**
- * The common class which listens and accepts the incoming connections.
+ * The main class which listens and accepts the incoming connections.
+ * Interaction is done by using the respective handlers such as on_accept_type and on_error_type.
+ * Once the connection is accepted, the on_accept_type is invoked; if case of error the on_error_type is called.
  *
  * ### Example
  * ```cpp
@@ -47,45 +49,45 @@ class listener: public base::strand_stream
     , public std::enable_shared_from_this<listener<LISTENER_TEMPLATE_ATTRIBUTES>>
 {
 public:
-    /// Typedef referencing to self
+    /// The self type
     using self_type = listener<LISTENER_TEMPLATE_ATTRIBUTES>;
 
-    /// Typedef referencing to the given Protocol
+    /// The protocol type associated with the endpoint
     using protocol_type = Protocol;
 
-    /// Typedef referencing to the basic socket acceptor
+    /// the acceptor type
     using acceptor_type = Acceptor;
 
-    /// Typedef referencing to a stream socket
+    /// The socket type
     using socket_type = Socket;
 
-    /// Typedef referencing to the basic endpoint type
+    /// The endpoint type
     using endpoint_type = Endpoint<protocol_type>;
 
-    /// Typedef callback on accept
+    /// The on accept callback type
     using on_accept_type = std::function<void(socket_type)>;
 
-    /// Typedef callback on error
+    /// The on error callback type
     using on_error_type = std::function<void(boost::system::error_code, boost::string_view)>;
 
     /// Constructor
     /**
      * @param ctx A reference to the `boost::asio::io_context`
-     * @param on_accept An rvalue reference on the callback on which invokes on new connection
+     * @param on_accept An rvalue reference and refers to `on_accept_type`; invokes on new connection
      */
     explicit listener(boost::asio::io_context &ctx, on_accept_type &&on_accept);
 
     /// Constructor
     /**
      * @param ctx A reference to the `boost::asio::io_context`
-     * @param on_accept An rvalue reference on the callback; invokes on new connection
-     * @param on_error An rvalue reference on the callback; invokes on error 
+     * @param on_accept An rvalue reference and refers to `on_accept_type`; invokes on new connection
+     * @param on_error An rvalue reference and refers to `on_error_type`; invokes on error 
      */
     explicit listener(boost::asio::io_context &ctx, on_accept_type &&on_accept, on_error_type &&on_error);
 
-    /// The factory method to start listening
+    /// The factory method which creates `self_type` and starts listening and accepts new connections-
     /**
-     * Create an instance of `self` and start listening by calling loop() method
+     * Creates an instance of `self_type` and starts listening by calling loop() method
      *
      * @param ctx A reference to the `boost::asio::io_context`
      * @param endpoint A const reference to the endpoint_type
@@ -99,7 +101,7 @@ public:
 protected:
     /// Starts a loop on the given endpoint
     /**
-     * @param Endpoint
+     * @param endpoint
      * @returns void
      */
     void loop(const endpoint_type &endpoint);
@@ -123,5 +125,5 @@ private:
 
 } // namespace beast_router
 
-#include "impl/listener.hpp"
+#include "impl/listener.ipp"
 

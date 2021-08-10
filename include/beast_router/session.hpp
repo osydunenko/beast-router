@@ -2,7 +2,6 @@
 
 #include <any>
 #include <regex>
-#include <chrono>
 #include <algorithm>
 #include <type_traits>
 
@@ -20,25 +19,18 @@
 #include "base/clb.hpp"
 #include "common/connection.hpp"
 #include "common/timer.hpp"
+#include "common/utility.hpp"
 #include "router.hpp"
 
 #define SESSION_TEMPLATE_ATTRIBUTES \
     Body, RequestParser, Buffer, Protocol, Socket
 
 namespace beast_router {
-namespace details {
 
-template<class T>
-struct is_chrono_duration: std::false_type {};
-
-template<class Rep, class Period>
-struct is_chrono_duration<std::chrono::duration<Rep, Period>>: std::true_type {};
-
-template<class T>
-constexpr bool is_chrono_duration_v = is_chrono_duration<T>::value;
-
-} // namespace details
-
+/// Encapsulates the sessions handling and buffers storing in a queue
+/**
+ * The common class which handles all the active sessions and dispatch them through the loop
+ */
 template<
     class Body = boost::beast::http::string_body,
     class RequestParser = boost::beast::http::request_parser<Body>,
@@ -54,62 +46,104 @@ public:
     template<class>
     class context;
 
+    /// The self type
     using self_type = session<SESSION_TEMPLATE_ATTRIBUTES>;
 
+    /// The body type associated with the request_type
     using body_type = Body;
 
+    /// The request type
     using request_type = boost::beast::http::request<body_type>;
 
+    /// The response type 
     template<class ResponseBody>
     using response_type = boost::beast::http::response<ResponseBody>;
 
+    /// The request parser type
     using request_parser_type = RequestParser;
 
+    /// The response serializer type
     template<class ResponseBody>
     using response_serializer_type = boost::beast::http::response_serializer<ResponseBody>;
 
+    /// The buffer type
     using buffer_type = Buffer;
 
+    /// The protocol type
     using protocol_type = Protocol;
 
+    /// The socket type
     using socket_type = Socket;
 
+    /// The mutex type
     using mutex_type = base::lockable::mutex_type;
 
+    /// The internal `impl` type
     using impl_type = impl;
 
+    /// The context type
     using context_type = context<impl_type>;
 
+    /// The connection type 
     using connection_type = connection<socket_type, base::strand_stream::asio_type>;
 
+    /// The timer type
     using timer_type = timer<base::strand_stream::asio_type, boost::asio::steady_timer>;
 
+    /// The timer duration type used for timeouts
     using timer_duration_type = typename timer_type::duration_type;
 
+    /// The on_error callback type
     using on_error_type = std::function<void(boost::system::error_code, boost::string_view)>;
 
+    /// The shutdown type
     using shutdown_type = typename socket_type::shutdown_type;
 
+    /// The method type references onto `boost::beast::http::verb`
     using method_type = boost::beast::http::verb;
 
+    /// The storage type hold callbacks and passed to the router
     using storage_type = base::clb::storage<self_type>;
 
+    /// The container type for storing storage type associated with the resource
     using resource_map_type = std::unordered_map<std::string, storage_type>; 
 
+    /// The method map container type associated with th resource_map_type
     using method_map_type = std::map<method_type, resource_map_type>;
 
+    /// Typedef referencing to the Router type
     using router_type = router<self_type>;
 
+    /// Typedef definition for the Queue
     using conn_queue_type = base::conn_queue<impl_type>;
 
+    /// The method for receiving data from a connection
+    /**
+     * The method receives data send by a connection
+     *
+     * @param socket An rvalue reference to the socket
+     * @param router A const reference to the Router
+     * @param onAction A list of callbacks 
+     * @returns context_type
+     */
     template<class ...OnAction>
     static context_type recv(socket_type &&socket, const router_type &router, OnAction &&...onAction);
 
+    /// The method for receiving data from a connection whithin the timeout
+    /**
+     * The method receives data send by a connection whithin the given duration
+     * by creating a timer
+     *
+     * @param socket An rvalue reference ot the socket
+     * @param router A const reference to the Router
+     * @param duration A duration for handling the timeout
+     * @param onAction A list of callbacks
+     * @returns context_type
+     */
     template<class TimeDuration, class ...OnAction>
     static context_type recv(socket_type &&socket, const router_type &router, TimeDuration &&duration, OnAction &&...onAction);
 
 private:
-
     template<class ...OnAction>
     static context_type init_context(socket_type &&socket, const router_type &router, OnAction &&...onAction);
 
@@ -163,6 +197,11 @@ private:
     };
 
 public:
+    /// The Context class
+    /**
+     * The main class which is passed as a parameter to the user and used for the interactions
+     * whithin the connection.
+     */
     template<class Impl>
     class context
     {
@@ -170,29 +209,70 @@ public:
             boost::asio::strand<boost::asio::system_timer::executor_type>, Impl>);
 
     public:
+        /// Constructor
+        /**
+         * @param Impl A reference to `impl`
+         */
         context(Impl &impl);
 
+        /// The method receives a data send by the socket
+        /**
+         * @returns void
+         */
         void recv();
 
+        /// The method receives a data send by the socket whithin the timeout
+        /**
+         * @param duration A time duration used by the timer
+         * @returns void
+         */
         template<class TimeDuration>
-        typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>> 
+        typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>> 
         recv(TimeDuration &&duration);
 
+        /// The method does send data back to client
+        /**
+         * @param response The response type associated with the ResponseBody
+         * @returns void
+         */
         template<class ResponseBody>
         void send(const response_type<ResponseBody> &response) const;
 
+        /// The method does send data back to client within the timeout
+        /**
+         * @param response The response type associated with the ResponseBody
+         * @param duration A time duration used by the timer
+         * @returns void
+         */
         template<class ResponseBody, class TimeDuration>
-        typename std::enable_if_t<details::is_chrono_duration_v<TimeDuration>>
+        typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
         send(const response_type<ResponseBody> &response, TimeDuration &&duration) const;
 
+        /// Obtains the state of the connection
+        /**
+         * @returns bool
+         */
         bool is_open() const;
         
+        /// Obtains the user data; lvalue reference context
+        /**
+         * @returns Type reference
+         */
         template<class Type>
         Type &get_user_data() &;
 
+        /// Obtains the user data; rvalue reference context
+        /**
+         * @returns Type rvalue eference
+         */
         template<class Type>
         Type &&get_user_data() &&;
 
+        /// Sets user data
+        /**
+         * @param data A data type to store
+         * @returns void
+         */
         template<class Type>
         void set_user_data(Type data);
 
@@ -204,4 +284,4 @@ public:
 
 } // namespace beast_router
 
-#include "impl/session.hpp"
+#include "impl/session.ipp"

@@ -7,6 +7,7 @@
 namespace beast_router {
 namespace base {
 
+/// Handles packages dispatching to be sent
 template<class Impl>
 class conn_queue
 {
