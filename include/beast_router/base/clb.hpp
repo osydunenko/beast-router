@@ -3,7 +3,6 @@
 #include <functional>
 #include <vector>
 #include <regex>
-#include <tuple>
 
 #include "../common/utility.hpp"
 
@@ -38,7 +37,11 @@ public:
         class ...OnRequest,
         typename = std::enable_if_t<
             utility::is_all_true_v<
-                std::is_invocable_v<OnRequest, const request_type &, context_type &, const std::smatch &>...
+                (
+                    std::is_invocable_v<OnRequest, const request_type &, context_type &, const std::smatch &> ||
+                    std::is_invocable_v<OnRequest, const request_type &, context_type &> ||
+                    std::is_invocable_v<OnRequest, context_type &>
+                )...
             > && sizeof...(OnRequest) >= 1
         >
     >
@@ -55,7 +58,7 @@ public:
                 idx,
                 tuple,
                 std::make_index_sequence<size>{},
-                [&](auto entry) -> bool {
+                [&](auto &&entry) -> bool {
                     m_clbs.push_back(
                         std::make_unique<callback_impl<decltype(entry)>>(entry)
                     );
@@ -91,24 +94,34 @@ private:
     {
         using return_type = utility::func_traits_result_t<Func>;
 
-        callback_impl(Func func)
+        callback_impl(Func &&func)
         {
-            m_func = std::bind<return_type>(
-                func,
-                std::placeholders::_1,
-                std::placeholders::_2,
-                std::placeholders::_3
-            );
+            if constexpr (std::is_invocable_v<Func, const request_type &, context_type &, const std::smatch &>) {
+                m_func = std::bind<return_type>(
+                    std::forward<Func>(func),
+                    std::placeholders::_1,
+                    std::placeholders::_2,
+                    std::placeholders::_3);
+            } else if constexpr (std::is_invocable_v<Func, const request_type &, context_type &>) {
+                m_func = std::bind<return_type>(
+                    std::forward<Func>(func),
+                    std::placeholders::_1,
+                    std::placeholders::_2);
+            } else if constexpr (std::is_invocable_v<Func, context_type &>) {
+                m_func = std::bind<return_type>(
+                    std::forward<Func>(func),
+                    std::placeholders::_2);
+            }
         }
 
-        bool operator()(const request_type &req, context_type &ctx, const std::smatch &match) override
+        bool operator()(const request_type &request, context_type &ctx, const std::smatch &match) override
         {
-            if constexpr (std::is_same<return_type, bool>::value) {
-                return m_func(req, ctx, match);
-            } else {
-                m_func(req, ctx, match);
-                return true;
+            if constexpr (std::is_same_v<return_type, bool>) {
+                return m_func(request, ctx, match);
             }
+
+            m_func(request, ctx, match);
+            return true;
         }
 
         std::function<return_type(const request_type &, context_type &, const std::smatch &)> m_func;

@@ -96,11 +96,15 @@ public:
      * @note A handler must return either void or bool
      * - in case when the return type is void then the next handler executes right after the current is finished
      * - in case when the return type is the boolean data type and then the execution is based on the following vlaues:
-     *   - if return type is `true` then the next handler executes
-     *   - if return type is `false` then the complete chain of handlers breaks
+     *   - if return type is equal to `true` then the next handler executes
+     *   - if return type is equal to `false` then the complete chain of handlers breaks
      * @note Two cases of handlers declaration:
      * - std::function<bool(const request_type &, context_type &, const std::smatch &)>
      * - std::function<void(const request_type &, context_type &, const std::smatch &)>
+     * @note The callback has to be compatible with the signatures which accept the following set of parameters:
+     * - const request_type &, context_type &, const std::smatch &
+     * - const request_type &, context_type &
+     * - context_type &
      */
     template<class ...OnRequest>
     auto get(const std::string &path, OnRequest &&...on_request)

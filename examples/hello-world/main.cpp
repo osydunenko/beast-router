@@ -28,7 +28,7 @@ static beast_router::http_router router;
 int main(int argc, char **argv)
 {
     /// Define the callback
-    auto clb = [](const beast_http_request &rq, http_context &ctx, const std::smatch &) {
+    auto clb = [](const beast_http_request &rq, http_context &ctx) {
         beast_string_response rp{beast::http::status::ok, rq.version()};
         rp.set(beast::http::field::content_type, "text/html");
 

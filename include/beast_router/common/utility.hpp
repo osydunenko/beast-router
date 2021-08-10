@@ -2,6 +2,7 @@
 
 #include <type_traits>
 #include <chrono>
+#include <tuple>
 
 namespace beast_router {
 namespace utility {
