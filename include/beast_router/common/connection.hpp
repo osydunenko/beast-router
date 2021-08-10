@@ -11,7 +11,7 @@ namespace beast_router {
 
 /// Encapsulates the connections related functionality
 /**
- * @note The class is not copyable and assignment
+ * @note The class is not copyable nor assignment
  */
 template<class Socket, class CompletionExecutor>
 class connection
@@ -27,23 +27,21 @@ public:
     using shutdown_type = typename socket_type::shutdown_type;
 
     /// Constructor
-    /**
-     * @param socket An rvalue reference to socket
-     * @executor A const reference to the complition executor
-     */
     explicit connection(Socket &&socket, const CompletionExecutor &executor);
 
-    /// Copy constructor - deleted
+    /// Constructor
     connection(const self_type &) = delete;
 
-    /// Assignment operator - deleted
-    self_type &operator=(const self_type &) = delete;
+    /// Assignment
+    self_type &
+    operator=(const self_type &) = delete;
 
-    /// Move contructor - deleted
+    /// Constructor
     connection(self_type &&) = delete;
 
-    /// Move assignment operator - deleted
-    self_type &operator=(self_type &&) = delete;
+    /// Assignment
+    self_type &
+    operator=(self_type &&) = delete;
 
     /// Destructor
     ~connection();
@@ -55,7 +53,8 @@ public:
      * @returns void
      */
     template <class Function, class Serializer>
-    void async_write(Serializer &serializer, Function &&func);
+    void
+    async_write(Serializer &serializer, Function &&func);
 
     /// Asynchronous reader
     /**
@@ -65,26 +64,30 @@ public:
      * @returns void
      */
     template <class Function, class Buffer, class Parser>
-    void async_read(Buffer &buffer, Parser &parser, Function &&func);
+    void
+    async_read(Buffer &buffer, Parser &parser, Function &&func);
 
     /// Shutdowns a connection
     /**
      * @param type The shutdown parameter
      * @returns error_code
      */
-    boost::beast::error_code shutdown(shutdown_type type);
+    boost::beast::error_code
+    shutdown(shutdown_type type);
 
     /// Closes a connection
     /**
      * @returns error_code
      */
-    boost::beast::error_code close();
+    boost::beast::error_code
+    close();
 
     /// Obtains a connection status
     /**
      * @returns bool
      */
-    bool is_open() const;
+    bool
+    is_open() const;
 
 private:
     Socket m_socket;

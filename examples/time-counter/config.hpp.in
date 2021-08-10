@@ -1,0 +1,3 @@
+#pragma once
+
+#define DOC_BASE_PATH "@DOC_BASE_PATH@"

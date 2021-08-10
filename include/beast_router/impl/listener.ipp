@@ -18,14 +18,6 @@
 namespace beast_router {
 
 LISTENER_TEMPLATE_DECLARE
-template<class ...OnAction>
-auto listener<LISTENER_TEMPLATE_ATTRIBUTES>::launch(boost::asio::io_context &ctx, const endpoint_type &endpoint, OnAction &&...on_action)
-    -> decltype(self_type(std::declval<boost::asio::io_context&>(), std::declval<OnAction>()...), void())
-{
-    std::make_shared<self_type>(ctx, std::forward<OnAction>(on_action)...)->loop(endpoint);
-}
-
-LISTENER_TEMPLATE_DECLARE
 listener<LISTENER_TEMPLATE_ATTRIBUTES>::listener(boost::asio::io_context &ctx, on_accept_type &&on_accept)
     : base::strand_stream{ctx.get_executor()} 
     , m_acceptor{ctx}

@@ -81,21 +81,12 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::impl::recv(timer_duration_type duration)
 }
 
 SESSION_TEMPLATE_DECLARE
-template<class ResponseBody>
+template<class Response>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &
-session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(const response_type<ResponseBody> &response)
-{
-    m_queue(response);
-    return *this;
-}
-
-SESSION_TEMPLATE_DECLARE
-template<class ResponseBody>
-typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &
-session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(const response_type<ResponseBody> &response, timer_duration_type duration)
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(Response &&response, timer_duration_type duration)
 {
     do_timer(std::move(duration));
-    m_queue(response);
+    m_queue(std::forward<Response>(response));
     return *this;
 }
 
@@ -130,8 +121,10 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_read()
 SESSION_TEMPLATE_DECLARE
 void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_read(boost::system::error_code ec, size_t bytes_transferred)
 {
-    m_timer.cancel();
     static_cast<void>(bytes_transferred);
+
+    m_timer.cancel();
+
     if (ec == boost::beast::http::error::end_of_stream) {
         do_eof(shutdown_type::shutdown_both);
         return;
@@ -215,6 +208,8 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_write(boost::system::error_c
 {
     static_cast<void>(bytes_transferred);
 
+    m_timer.cancel();
+
     if (ec && m_on_error) {
         m_on_error(ec, "async_read/on_write");
         return;
@@ -269,35 +264,18 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(TimeDuration &&duratio
 
 SESSION_TEMPLATE_DECLARE
 template<class Impl>
-template<class ResponseBody>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(const response_type<ResponseBody> &response) const
+template<class Response>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(Response &&response) const
 {
-    assert(m_impl != nullptr);
-    boost::asio::dispatch(
-        static_cast<base::strand_stream &>(*m_impl),
-        std::bind(
-            static_cast<Impl &(Impl::*)(const response_type<ResponseBody> &)>(&Impl::send),
-            m_impl->shared_from_this(),
-            response
-        )
-    );
+    do_send(std::forward<Response>(response), timer_duration_type::max());
 }
 
 SESSION_TEMPLATE_DECLARE
 template<class Impl>
-template<class ResponseBody, class TimeDuration>
-typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
-session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(const response_type<ResponseBody> &response, TimeDuration &&duration) const
+template<class Response, class TimeDuration>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(Response &&response, TimeDuration &&duration) const
 {
-    assert(m_impl != nullptr);
-    boost::asio::dispatch(
-        static_cast<base::strand_stream &>(*m_impl),
-        std::bind(
-            static_cast<Impl &(Impl::*)(const response_type<ResponseBody> &, timer_duration_type)>(&Impl::send),
-            m_impl->shared_from_this(),
-            response, std::chrono::duration_cast<timer_duration_type>(std::forward<TimeDuration>(duration))
-        )
-    );
+    do_send(std::forward<Response>(response), std::forward<TimeDuration>(duration));
 }
 
 SESSION_TEMPLATE_DECLARE
@@ -330,6 +308,33 @@ template<class Type>
 void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::set_user_data(Type data)
 {
     m_user_data = std::make_any<Type>(std::move(data));
+}
+
+SESSION_TEMPLATE_DECLARE
+template<class Impl>
+template<class Response, class TimeDuration>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::do_send(Response &&response, TimeDuration &&duration) const
+{
+    static_assert(utility::is_chrono_duration_v<TimeDuration>,
+        "TimeDuration requirements are not met");
+
+    assert(m_impl != nullptr);
+
+    auto callback = [
+        rsp = std::forward<Response>(response), 
+        dur = std::forward<TimeDuration>(duration),
+        impl = m_impl->shared_from_this()
+    ]() mutable -> Impl &
+    {
+        return impl->send(
+            std::forward<Response>(rsp), 
+            std::forward<TimeDuration>(dur));
+    };
+
+    boost::asio::dispatch(
+        static_cast<base::strand_stream &>(*m_impl),
+        std::move(callback)
+    );
 }
 
 } // namespace beast_router

@@ -12,7 +12,7 @@ using namespace std::chrono_literals;
 
 /// Encapsulates the timer related functionality
 /**
- * @note The class is not copyable and assignment
+ * @note The class is not copyable nor assignment
  */
 template<
     class CompletionExecutor, 
@@ -37,41 +37,43 @@ public:
     using duration_type = typename clock_type::duration;
 
     /// Constructor
-    /**
-     * @param executor A const reference to the complition executor
-     */
     explicit timer(const CompletionExecutor &executor);
 
-    /// Copy constructor - deleted
+    /// Constructor
     timer(const self_type &) = delete;
 
-    /// Assignment operator - deleted
-    self_type &operator=(const self_type &) = delete;
+    /// Assignment
+    self_type &
+    operator=(const self_type &) = delete;
 
-    /// Move contructor - deleted
+    /// Constructor
     timer(self_type &&) = delete;
 
-    /// Move assignment operator - deleted
-    self_type &operator=(self_type &&) = delete;
+    /// Assignment
+    self_type &
+    operator=(self_type &&) = delete;
 
-    /// Sets an expire time point
+    /// Sets an expiration time point
     /**
      * @param expire_time A duration value for the time point calculation
      * @returns The number of asynchronous operations that were cancelled
      */
-    std::size_t expires_from_now(const duration_type &expire_time);
+    std::size_t
+    expires_from_now(const duration_type &expire_time);
 
     /// Returns the expire time point
     /**
      * @return time_point_type
      */
-    time_point_type expiry() const;
+    time_point_type
+    expiry() const;
 
     /// Cancels a timer
     /**
      * @returns error_code
      */
-    boost::system::error_code cancel();
+    boost::system::error_code
+    cancel();
  
     /// Asynchronous waiter and timer activator
     /** 
@@ -79,7 +81,8 @@ public:
      * @return void
      */
     template<class Function>
-    void async_wait(Function &&func);
+    void 
+    async_wait(Function &&func);
 
 private:
     const CompletionExecutor &m_executor;

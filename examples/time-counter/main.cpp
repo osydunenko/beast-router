@@ -1,14 +1,12 @@
-#include <atomic>
+#include <string_view>
 #include <vector>
-#include <sstream>
-#include "beast_router.hpp"
+#include <map>
 
-using namespace std;
+#include "beast_router.hpp"
+#include "config.hpp"
+
 using namespace boost;
 using namespace beast_router;
-
-/// requests counter
-static atomic<uint64_t> counter{0};
 
 /// ip address
 static const auto address = asio::ip::address_v4::any();
@@ -27,19 +25,32 @@ static http_router router;
 
 int main(int, char **)
 {
-    /// Define the callback
-    auto clb = [](const beast_http_request &rq, http_context &ctx) {
-        stringstream i_str;
-        i_str << "Hello World: the request was triggered [" << ++counter << "] times";
+    /// Add handler for the static content
+    ::router.get(R"(^.*\.(js|html)$)", 
+        [](const beast_http_request &rq, http_context &ctx) {
+            // Request path must be absolute and not contain ".."
+            if (rq.target().empty() ||
+                rq.target()[0] != '/' ||
+                rq.target().find("..") != beast::string_view::npos) {
+                
+                // Send bad request
+                ctx.send(make_string_response(http::status::bad_request, 
+                    rq.version(), "Illegal request-target"));
+                return;
+            }
+            
+            // Append an HTTP rel-path to a local fs path
+            std::string path{DOC_BASE_PATH};
+            path.append(rq.target().data(), rq.target().size());
 
-        auto rp = make_string_response(http::status::ok, rq.version(), i_str.str());
-        rp.keep_alive(rq.keep_alive());
+            // Attempt to open a file and respond to the request
+            ctx.send(make_file_response(rq.version(), path));
+        });
 
-        ctx.send(std::move(rp));
-    };
-
-    /// Add the above callback and link to all the possible requests patterns
-    ::router.get(R"(^.*$)", std::move(clb));
+    /// Redirect to index.html
+    ::router.get(R"(^/$)", [](const beast_http_request &rq, http_context &ctx) {
+        ctx.send(make_moved_response(rq.version(), "/index.html"));
+    });
 
     /// Define callbacks for the listener
     http_listener::on_error_type on_error = [](system::error_code ec, std::string_view) {
@@ -60,10 +71,10 @@ int main(int, char **)
     });
 
     /// Get number of available processors
-    auto processor_count = thread::hardware_concurrency();
+    auto processor_count = std::thread::hardware_concurrency();
 
     /// Create threads where size is eq. to the number of CPUs
-    vector<thread> threads;
+    std::vector<std::thread> threads;
     for (decltype(processor_count) i = 0; i < processor_count; ++i) {
         threads.emplace_back(
             bind(static_cast<size_t(asio::io_context::*)()>(&asio::io_context::run), std::ref(ioc))

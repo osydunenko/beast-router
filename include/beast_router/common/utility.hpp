@@ -42,17 +42,50 @@ struct func_traits_result_type<R(&)(Args...)>
     using result_type = R;
 };
 
+template<class Class, class ...Args>
+struct is_class_creatable
+{
+    static_assert(std::is_class_v<Class>,
+        "Class requirements are not met");
+
+    using one = char;
+    struct two { char x[2]; };
+
+    template<class C, class ...A>
+    static auto test(int) -> decltype(C{std::declval<A>()...}, one());
+    template<class C, class ...A>
+    static two test(...);
+
+    enum { value = sizeof(test<Class, Args...>(0) == sizeof(one)) };
+};
+
 } // namespace details
 
+/// Type Trait for testing chrono duration
 template<class T>
 constexpr bool is_chrono_duration_v = details::is_chrono_duration<T>::value;
 
+/// Is All are True parameter types checker
 template<bool ...V>
 constexpr bool is_all_true_v = details::is_all_true<V...>::value;
 
+/// Type Trait for testing class creation
+template<class Class, class ...Args>
+constexpr bool is_class_creatable_v = details::is_class_creatable<Class, Args...>::value;
+
+/// Type Trait for unpack a function return value
 template<class T>
 using func_traits_result_t = typename details::func_traits_result_type<T>::result_type;
 
+/// Iterator method over a tuple
+/*
+ * Iterates over a tuple and invokes respective func by index
+ *
+ * @param idx index for execution
+ * @param tuple Tuple within the data
+ * @param func Refrence to the callback
+ * @return void
+ */
 template<class Tuple, class Func, std::size_t ...Idxs>
 void tuple_func_idx(std::size_t idx, const Tuple &tuple, std::index_sequence<Idxs...>, Func &&func)
 {

@@ -4,6 +4,7 @@
 #include <regex>
 #include <algorithm>
 #include <type_traits>
+#include <string_view>
 
 #include <boost/beast/http/string_body.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
@@ -16,7 +17,7 @@
 #include "base/strand_stream.hpp"
 #include "base/conn_queue.hpp"
 #include "base/lockable.hpp"
-#include "base/clb.hpp"
+#include "base/storage.hpp"
 #include "common/connection.hpp"
 #include "common/timer.hpp"
 #include "common/utility.hpp"
@@ -27,7 +28,7 @@
 
 namespace beast_router {
 
-/// Encapsulates the sessions handling and buffers storing in a queue
+/// Encapsulates the sessions handling and buffers storing
 /**
  * The common class which handles all the active sessions and dispatch them through the loop
  */
@@ -59,12 +60,12 @@ public:
     template<class ResponseBody>
     using response_type = boost::beast::http::response<ResponseBody>;
 
-    /// The request parser type
-    using request_parser_type = RequestParser;
-
     /// The response serializer type
     template<class ResponseBody>
     using response_serializer_type = boost::beast::http::response_serializer<ResponseBody>;
+
+    /// The request parser type
+    using request_parser_type = RequestParser;
 
     /// The buffer type
     using buffer_type = Buffer;
@@ -94,7 +95,7 @@ public:
     using timer_duration_type = typename timer_type::duration_type;
 
     /// The on_error callback type
-    using on_error_type = std::function<void(boost::system::error_code, boost::string_view)>;
+    using on_error_type = std::function<void(boost::system::error_code, std::string_view)>;
 
     /// The shutdown type
     using shutdown_type = typename socket_type::shutdown_type;
@@ -103,7 +104,7 @@ public:
     using method_type = boost::beast::http::verb;
 
     /// The storage type hold callbacks and passed to the router
-    using storage_type = base::clb::storage<self_type>;
+    using storage_type = base::storage<self_type>;
 
     /// The container type for storing storage type associated with the resource
     using resource_map_type = std::unordered_map<std::string, storage_type>; 
@@ -127,7 +128,8 @@ public:
      * @returns context_type
      */
     template<class ...OnAction>
-    static context_type recv(socket_type &&socket, const router_type &router, OnAction &&...onAction);
+    static context_type
+    recv(socket_type &&socket, const router_type &router, OnAction &&...onAction);
 
     /// The method for receiving data from a connection whithin the timeout
     /**
@@ -141,7 +143,8 @@ public:
      * @returns context_type
      */
     template<class TimeDuration, class ...OnAction>
-    static context_type recv(socket_type &&socket, const router_type &router, TimeDuration &&duration, OnAction &&...onAction);
+    static context_type
+    recv(socket_type &&socket, const router_type &router, TimeDuration &&duration, OnAction &&...onAction);
 
 private:
     template<class ...OnAction>
@@ -167,10 +170,8 @@ private:
         self_type &recv();
         self_type &recv(timer_duration_type duration);
 
-        template<class ResponseBody>
-        self_type &send(const response_type<ResponseBody> &response);
-        template<class ResponseBody>
-        self_type &send(const response_type<ResponseBody> &response, timer_duration_type duration);
+        template<class Response>
+        self_type &send(Response &&response, timer_duration_type duration);
 
     private:
         void do_timer(timer_duration_type duraion);
@@ -199,27 +200,27 @@ private:
 public:
     /// The Context class
     /**
-     * The main class which is passed as a parameter to the user and used for the interactions
-     * whithin the connection.
+     * The main class which is passed as a parameter to the user 
+     * and used for the interaction whithin the connection.
      */
     template<class Impl>
     class context
     {
-        static_assert(std::is_base_of_v<
-            boost::asio::strand<boost::asio::system_timer::executor_type>, Impl>);
-
+        static_assert(
+            std::is_base_of_v<
+                boost::asio::strand<boost::asio::system_timer::executor_type>, Impl>,
+            "Context requirements are not met");
+        
     public:
         /// Constructor
-        /**
-         * @param Impl A reference to `impl`
-         */
         context(Impl &impl);
 
         /// The method receives a data send by the socket
         /**
          * @returns void
          */
-        void recv();
+        void 
+        recv();
 
         /// The method receives a data send by the socket whithin the timeout
         /**
@@ -230,43 +231,47 @@ public:
         typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>> 
         recv(TimeDuration &&duration);
 
-        /// The method does send data back to client
+        /// The overloaded method does send data back to client
         /**
-         * @param response The response type associated with the ResponseBody
+         * @param response The response type associated with the ReponseBody
          * @returns void
          */
-        template<class ResponseBody>
-        void send(const response_type<ResponseBody> &response) const;
+        template<class Response>
+        void 
+        send(Response &&response) const;
 
-        /// The method does send data back to client within the timeout
+        /// The overloaded method does send data back to client within the timeout
         /**
          * @param response The response type associated with the ResponseBody
          * @param duration A time duration used by the timer
          * @returns void
          */
-        template<class ResponseBody, class TimeDuration>
-        typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
-        send(const response_type<ResponseBody> &response, TimeDuration &&duration) const;
+        template<class Response, class TimeDuration>
+        void 
+        send(Response &&response, TimeDuration &&duration) const;
 
         /// Obtains the state of the connection
         /**
          * @returns bool
          */
-        bool is_open() const;
+        bool
+        is_open() const;
         
         /// Obtains the user data; lvalue reference context
         /**
          * @returns Type reference
          */
         template<class Type>
-        Type &get_user_data() &;
+        Type &
+        get_user_data() &;
 
         /// Obtains the user data; rvalue reference context
         /**
          * @returns Type rvalue eference
          */
         template<class Type>
-        Type &&get_user_data() &&;
+        Type &&
+        get_user_data() &&;
 
         /// Sets user data
         /**
@@ -274,8 +279,13 @@ public:
          * @returns void
          */
         template<class Type>
-        void set_user_data(Type data);
+        void
+        set_user_data(Type data);
 
+    protected:
+        template<class Response, class TimeDuration>
+        void do_send(Response &&response, TimeDuration &&duration) const;
+            
     private:
         std::shared_ptr<Impl> m_impl;
         std::any m_user_data;

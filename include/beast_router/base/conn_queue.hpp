@@ -32,10 +32,10 @@ public:
     template<class Response>
     void operator()(Response &&rsp)
     {
-        using response_type = std::decay_t<Response>;
-
         struct wrk_impl: wrk
         {
+            using response_type = std::decay_t<Response>;
+
             wrk_impl(impl_type &impl, Response &&rsp)
                 : m_impl{impl}
                 , m_response{std::forward<Response>(rsp)}

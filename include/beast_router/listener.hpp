@@ -1,14 +1,15 @@
 #pragma once
 
 #include <memory>
+#include <string_view>
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/socket_base.hpp>
 #include <boost/system/error_code.hpp>
-#include <boost/utility/string_view.hpp>
 
 #include "base/strand_stream.hpp"
+#include "common/utility.hpp"
 
 #define LISTENER_TEMPLATE_ATTRIBUTES \
     Protocol, Acceptor, Socket, Endpoint
@@ -19,11 +20,11 @@ namespace beast_router {
 /**
  * The main class which listens and accepts the incoming connections.
  * Interaction is done by using the respective handlers such as on_accept_type and on_error_type.
- * Once the connection is accepted, the on_accept_type is invoked; if case of error the on_error_type is called.
+ * Once the connection is accepted, the on_accept_type is invoked; in case of error the on_error_type is called.
  *
  * ### Example
  * ```cpp
- * http_listener::on_error_type on_error = [](boost::system::error_code ec, boost::string_view v) {
+ * http_listener::on_error_type on_error = [](boost::system::error_code ec, std::string_view v) {
  *      if (ec == boost::system::errc::address_in_use ||
  *          ec == boost::system::errc::permission_denied)
  *          g_ioc.stop();
@@ -68,24 +69,15 @@ public:
     using on_accept_type = std::function<void(socket_type)>;
 
     /// The on error callback type
-    using on_error_type = std::function<void(boost::system::error_code, boost::string_view)>;
+    using on_error_type = std::function<void(boost::system::error_code, std::string_view)>;
 
     /// Constructor
-    /**
-     * @param ctx A reference to the `boost::asio::io_context`
-     * @param on_accept An rvalue reference and refers to `on_accept_type`; invokes on new connection
-     */
     explicit listener(boost::asio::io_context &ctx, on_accept_type &&on_accept);
 
     /// Constructor
-    /**
-     * @param ctx A reference to the `boost::asio::io_context`
-     * @param on_accept An rvalue reference and refers to `on_accept_type`; invokes on new connection
-     * @param on_error An rvalue reference and refers to `on_error_type`; invokes on error 
-     */
     explicit listener(boost::asio::io_context &ctx, on_accept_type &&on_accept, on_error_type &&on_error);
 
-    /// The factory method which creates `self_type` and starts listening and accepts new connections-
+    /// The factory method which creates `self_type` and starts listening and accepts new connections
     /**
      * Creates an instance of `self_type` and starts listening by calling loop() method
      *
@@ -94,9 +86,16 @@ public:
      * @param on_action A list of actions suitable for the self construction i.e. `on_accept`, `on_error` signatures
      * @returns void
      */
-    template<class ...OnAction>
-    static auto launch(boost::asio::io_context &ctx, const endpoint_type &endpoint, OnAction &&...on_action)
-        -> decltype(self_type(std::declval<boost::asio::io_context&>(), std::declval<OnAction>()...), void());
+    template<
+        class ...OnAction,
+        std::enable_if_t<
+            utility::is_class_creatable_v<self_type, boost::asio::io_context &, OnAction...>, bool
+        > = true>
+    static void
+    launch(boost::asio::io_context &ctx, const endpoint_type &endpoint, OnAction &&...on_action)
+    {
+        std::make_shared<self_type>(ctx, std::forward<OnAction>(on_action)...)->loop(endpoint);
+    }
 
 protected:
     /// Starts a loop on the given endpoint
@@ -104,16 +103,20 @@ protected:
      * @param endpoint
      * @returns void
      */
-    void loop(const endpoint_type &endpoint);
+    void
+    loop(const endpoint_type &endpoint);
 
     /// An async accept method. Passes on_accept() as an internal callback which triggers on new connection
-    void do_accept();
+    void
+    do_accept();
 
     /// An internal on_accept callback and passes the event to on_spawn_method through the loop
-    void on_accept(boost::system::error_code ec, socket_type socket);
+    void
+    on_accept(boost::system::error_code ec, socket_type socket);
 
     /// Calls the given user specified on_accept callback
-    void on_spawn_connect(boost::system::error_code ec, socket_type &socket);
+    void
+    on_spawn_connect(boost::system::error_code ec, socket_type &socket);
 
 private:
     acceptor_type m_acceptor;

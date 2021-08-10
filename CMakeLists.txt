@@ -14,6 +14,13 @@ add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_17)
 
+# Add compile options
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_compile_options(-fdiagnostics-color=always -Wall -Wextra -pedantic -Werror)
+else()
+    message(FATAL_ERROR "The compiler \"${CMAKE_CXX_COMPILER_ID}\" is not supported")
+endif()
+
 # Check prereqs
 find_package(Boost REQUIRED COMPONENTS system thread)
 find_package(Doxygen)

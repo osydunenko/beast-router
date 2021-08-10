@@ -42,7 +42,9 @@ TIMER_TEMPLATE_DECLARE
 template<class Function>
 void timer<TIMER_TEMPLATE_ATTRIBUTES>::async_wait(Function &&func)
 {
-    static_assert(std::is_invocable_v<Function, boost::system::error_code>);
+    static_assert(
+        std::is_invocable_v<Function, boost::system::error_code>,
+        "timer::async_wait requirements are not met");
     m_timer.async_wait(
         boost::asio::bind_executor(
             m_executor, std::forward<Function>(func)

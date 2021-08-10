@@ -8,7 +8,6 @@
 
 namespace beast_router {
 namespace base { 
-namespace clb {
 
 /// Encapsulates and stores callbacks associated with resources 
 template<
@@ -35,7 +34,7 @@ public:
 
     template<
         class ...OnRequest,
-        typename = std::enable_if_t<
+        class = std::enable_if_t<
             utility::is_all_true_v<
                 (
                     std::is_invocable_v<OnRequest, const request_type &, context_type &, const std::smatch &> ||
@@ -130,6 +129,5 @@ private:
     container_type m_clbs;
 };
 
-} // namespace clb
 } // namespace base
 } // namespace beast_router

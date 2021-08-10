@@ -3,6 +3,7 @@
 #include <regex>
 
 #include "base/lockable.hpp"
+#include "common/utility.hpp"
 
 namespace beast_router {
 
@@ -10,6 +11,7 @@ namespace beast_router {
 /**
  * The common class which provides the basic routing features 
  * e.g. get(), put(), post() and delete_() handling.<br>
+ *
  * By using RegExp it stores and maps the corresponding executors 
  * given by invoking the respective linked methods.
  *
@@ -18,7 +20,7 @@ namespace beast_router {
  * #include "beast_router.hpp"
  * ...
  * auto clb = [](const beast_http_request &rq, http_context &ctx, const std::smatch &match) {
- *      beast_string_response rp{boost::beast::http::status::ok, rq.version()};
+ *      http_string_response rp{boost::beast::http::status::ok, rq.version()};
  *      rp.set(boost::beast::http::field::content_type, "text/html");
  *
  *      std::stringstream i_str;
@@ -66,6 +68,7 @@ public:
     /// The const pointer fpr the method_map_type
     using method_const_map_pointer = std::shared_ptr<const method_map_type>;
 
+    /// Constructor
     router();
 
     /// Returns a reference to the `mutex_type`
@@ -75,7 +78,8 @@ public:
      *
      * @returns mutex_type
      */
-    mutex_type &get_mutex() const;
+    mutex_type &
+    get_mutex() const;
 
     /// The method adds handlers and links them within the given path (RegExp) for the `"GET"` method
     /**
@@ -89,8 +93,12 @@ public:
      * std::is_invocable_v<OnRequest, const request_type &, context_type &, const std::smatch &>
      * ```
      * 
-     * @param path The <tt>std::string</tt> type and refers to RegExp associated within the handlers
-     * @param on_request A variadic template of the handlers to be sequentially executed for the given <tt>path</tt>
+     * @param path The <tt>std::string</tt> type and refers to 
+     * RegExp associated within the handlers
+     *
+     * @param on_request A variadic template of the handlers to be 
+     * sequentially executed for the given <tt>path</tt>
+     *
      * @returns void
      *
      * @note A handler must return either void or bool
@@ -98,17 +106,26 @@ public:
      * - in case when the return type is the boolean data type and then the execution is based on the following vlaues:
      *   - if return type is equal to `true` then the next handler executes
      *   - if return type is equal to `false` then the complete chain of handlers breaks
+     * 
      * @note Two cases of handlers declaration:
      * - std::function<bool(const request_type &, context_type &, const std::smatch &)>
      * - std::function<void(const request_type &, context_type &, const std::smatch &)>
+     * 
      * @note The callback has to be compatible with the signatures which accept the following set of parameters:
      * - const request_type &, context_type &, const std::smatch &
      * - const request_type &, context_type &
      * - context_type &
      */
-    template<class ...OnRequest>
-    auto get(const std::string &path, OnRequest &&...on_request)
-        -> decltype(storage_type(std::declval<OnRequest>()...), void());
+    template<
+        class ...OnRequest,
+        std::enable_if_t<
+            utility::is_class_creatable_v<storage_type, OnRequest...>, bool
+        > = true>
+    void
+    get(const std::string &path, OnRequest &&...on_request)
+    {
+        add_resource(path, method_type::get, storage_type{std::forward<OnRequest>(on_request)...});
+    }
 
     /// The methods adds handlers and links them within the given path (RegExp) for the `"PUT"` method
     /**
@@ -117,9 +134,16 @@ public:
      * @returns void
      * @note For more in details please refere to the get() method description
      */
-    template<class ...OnRequest>
-    auto put(const std::string &path, OnRequest &&...on_request)
-        -> decltype(storage_type(std::declval<OnRequest>()...), void());
+    template<
+        class ...OnRequest,
+        std::enable_if_t<
+            utility::is_class_creatable_v<storage_type, OnRequest...>, bool
+        > = true>
+    void
+    put(const std::string &path, OnRequest &&...on_request)
+    {
+        add_resource(path, method_type::put, storage_type{std::forward<OnRequest>(on_request)...});
+    }
     
     /// The methods adds handlers and links them within the given path (RegExp) for the `"POST"` method
     /**
@@ -128,9 +152,16 @@ public:
      * @returns void
      * @note For more in details please refere to the get() method description
      */
-    template<class ...OnRequest>
-    auto post(const std::string &path, OnRequest &&...on_request)
-        -> decltype(storage_type(std::declval<OnRequest>()...), void());
+    template<
+        class ...OnRequest,
+        std::enable_if_t<
+            utility::is_class_creatable_v<storage_type, OnRequest...>, bool
+        > = true>
+    void
+    post(const std::string &path, OnRequest &&...on_request)
+    {
+        add_resource(path, method_type::post, storage_type{std::forward<OnRequest>(on_request)...});
+    }
     
     /// The methods adds handlers and links them within the given path (RegExp) for the `"DELETE"` method
     /**
@@ -139,14 +170,27 @@ public:
      * @returns void
      * @note For more in details please refere to the get() method description
      */
-    template<class ...OnRequest>
-    auto delete_(const std::string &path, OnRequest &&...on_request)
-        -> decltype(storage_type(std::declval<OnRequest>()...), void());
+    template<
+        class ...OnRequest,
+        std::enable_if_t<
+            utility::is_class_creatable_v<storage_type, OnRequest...>, bool
+        > = true>
+    void
+    delete_(const std::string &path, OnRequest &&...on_request)
+    {
+        add_resource(path, method_type::delete_, storage_type{std::forward<OnRequest>(on_request)...});
+    }
 
-    method_const_map_pointer get_resource_map() const;
+    /// Obtains a const reference to the resource map
+    /*
+     * @returns method_const_map_pointer
+     */
+    method_const_map_pointer 
+    get_resource_map() const;
 
 private:
-    void add_resource(const std::string &path, const method_type &method, storage_type &&storage);
+    void
+    add_resource(const std::string &path, const method_type &method, storage_type &&storage);
 
     mutable mutex_type m_mutex;
     method_map_pointer m_method_map;

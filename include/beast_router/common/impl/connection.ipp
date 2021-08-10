@@ -27,7 +27,9 @@ CONNECTION_TEMPLATE_DECLARE
 template<class Function, class Serializer>
 void connection<CONNECTION_TEMPLATE_ATTRIBUTES>::async_write(Serializer &serializer, Function &&func)
 {
-    static_assert(std::is_invocable_v<Function, boost::system::error_code, size_t>);
+    static_assert(
+        std::is_invocable_v<Function, boost::system::error_code, size_t>,
+        "connection::async_write requirements are not met");
     boost::beast::http::async_write(m_socket, serializer,
         boost::asio::bind_executor(
             m_complition_executor, std::forward<Function>(func)
@@ -39,7 +41,9 @@ CONNECTION_TEMPLATE_DECLARE
 template <class Function, class Buffer, class Parser>
 void connection<CONNECTION_TEMPLATE_ATTRIBUTES>::async_read(Buffer &buffer, Parser &parser, Function &&func)
 {
-    static_assert(std::is_invocable_v<Function, boost::system::error_code, size_t>);
+    static_assert(
+        std::is_invocable_v<Function, boost::system::error_code, size_t>,
+        "connection::async_read requirements are not met");
     boost::beast::http::async_read(m_socket, buffer, parser,
         boost::asio::bind_executor(
             m_complition_executor, std::forward<Function>(func)
