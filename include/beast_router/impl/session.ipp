@@ -121,7 +121,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_read()
 SESSION_TEMPLATE_DECLARE
 void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_read(boost::system::error_code ec, size_t bytes_transferred)
 {
-    static_cast<void>(bytes_transferred);
+    boost::ignore_unused(bytes_transferred);
 
     m_timer.cancel();
 
@@ -206,7 +206,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_write(response_type<Response
 SESSION_TEMPLATE_DECLARE
 void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_write(boost::system::error_code ec, std::size_t bytes_transferred, bool close)
 {
-    static_cast<void>(bytes_transferred);
+    boost::ignore_unused(bytes_transferred);
 
     m_timer.cancel();
 

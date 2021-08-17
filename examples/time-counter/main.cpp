@@ -44,7 +44,9 @@ int main(int, char **)
             path.append(rq.target().data(), rq.target().size());
 
             // Attempt to open a file and respond to the request
-            ctx.send(make_file_response(rq.version(), path));
+            auto rp = make_file_response(rq.version(), path);
+
+            ctx.send(std::move(rp));
         });
 
     /// Redirect to index.html
