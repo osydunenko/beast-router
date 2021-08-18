@@ -4,7 +4,8 @@ namespace beast_router {
 
 const mime_type::container_type mime_type::mime_types = {
     {"html",    "text/html"},
-    {"js",      "application/javascript"}
+    {"js",      "application/javascript"},
+    {"css",     "text/css"}
 };
 
 std::string_view mime_type::get(std::string_view ext)

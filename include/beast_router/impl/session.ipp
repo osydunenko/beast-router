@@ -163,6 +163,11 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::provide(request_type &&request)
 {
     boost::string_view target = request.target(); 
     method_type method = request.method();
+    
+    auto make_context = [this]() mutable
+        -> context_type {
+        return context_type{*this};
+    };
 
     const auto method_pos = m_method_map->find(method);
     if (method_pos != m_method_map->cend()) {
@@ -175,12 +180,23 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::provide(request_type &&request)
                 const std::string target_string = target.to_string();
                 std::smatch base_match;
                 if (std::regex_match(target_string, base_match, re)) {
-                    storage_type &storage = const_cast<storage_type &>(val.second);
-                    context_type ctx{*this};
-                    storage.begin_execute(request, std::move(ctx), std::move(base_match));
+                    if (const_cast<storage_type &>(val.second)
+                            .begin_execute(request, make_context(), std::move(base_match))) {
+                        return;
+                    }
                 }
             }
         );
+    }
+
+    if (const auto not_found = m_method_map->find(method_type::unknown);
+        not_found != m_method_map->cend()) {
+        auto &resource_map = not_found->second;
+        if (const auto storage = resource_map.find("");
+            storage != resource_map.cend()) {
+            const_cast<storage_type &>(storage->second)
+                .begin_execute(request, make_context(), {});
+        }
     }
 }
 

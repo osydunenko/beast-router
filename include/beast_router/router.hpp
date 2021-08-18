@@ -4,6 +4,7 @@
 
 #include "base/lockable.hpp"
 #include "common/utility.hpp"
+#include "common/http_utility.hpp"
 
 namespace beast_router {
 
@@ -132,7 +133,7 @@ public:
      * @param path The <tt>std::string</tt> type and refers to RegExp associated within the handlers
      * @param on_request A variadic template of the handlers to be sequentially executed for the given <tt>path</tt>
      * @returns void
-     * @note For more in details please refere to the get() method description
+     * @note For more in details please refere to the @ref get() method description
      */
     template<
         class ...OnRequest,
@@ -150,7 +151,7 @@ public:
      * @param path The <tt>std::string</tt> type and refers to RegExp associated within the handlers
      * @param on_request A variadic template of the handlers to be sequentially executed for the given <tt>path</tt>
      * @returns void
-     * @note For more in details please refere to the get() method description
+     * @note For more in details please refere to the @ref get() method description
      */
     template<
         class ...OnRequest,
@@ -168,7 +169,7 @@ public:
      * @param path The <tt>std::string</tt> type and refers to RegExp associated within the handlers
      * @param on_request A variadic template of the handlers to be sequentially executed for the given <tt>path</tt>
      * @returns void
-     * @note For more in details please refere to the get() method description
+     * @note For more in details please refere to the @ref get() method description
      */
     template<
         class ...OnRequest,
@@ -181,8 +182,26 @@ public:
         add_resource(path, method_type::delete_, storage_type{std::forward<OnRequest>(on_request)...});
     }
 
+    /// The actions executors when no handlers for the resource are found
+    /**
+     * @param on_actio the list of actions to be seq. invoked
+     * @returns void
+     *
+     * @note The same set of rules are applied as for other method, @ref get()
+     */
+    template<
+        class ...OnAction,
+        std::enable_if_t<
+            utility::is_class_creatable_v<storage_type, OnAction...>, bool
+        > = true>
+    void
+    not_found(OnAction &&...on_action)
+    {
+        add_resource("", method_type::unknown, storage_type{std::forward<OnAction>(on_action)...});
+    }
+
     /// Obtains a const reference to the resource map
-    /*
+    /**
      * @returns method_const_map_pointer
      */
     method_const_map_pointer 
@@ -191,6 +210,14 @@ public:
 private:
     void
     add_resource(const std::string &path, const method_type &method, storage_type &&storage);
+
+    static bool not_found_handler(const typename session_type::request_type &rq, 
+        typename session_type::context_type &ctx)
+    {
+        ctx.send(make_string_response(http::status::not_found, 
+            rq.version(), "Not Found"));
+        return false; // break the chain of calls
+    }
 
     mutable mutex_type m_mutex;
     method_map_pointer m_method_map;

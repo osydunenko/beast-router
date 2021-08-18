@@ -1,4 +1,7 @@
 #include <string_view>
+#include <sstream>
+#include <iomanip>
+#include <chrono>
 #include <vector>
 #include <map>
 
@@ -26,7 +29,7 @@ static http_router router;
 int main(int, char **)
 {
     /// Add handler for the static content
-    ::router.get(R"(^.*\.(js|html)$)", 
+    ::router.get(R"(^.*\.(js|html|css)$)", 
         [](const beast_http_request &rq, http_context &ctx) {
             // Request path must be absolute and not contain ".."
             if (rq.target().empty() ||
@@ -34,9 +37,8 @@ int main(int, char **)
                 rq.target().find("..") != beast::string_view::npos) {
                 
                 // Send bad request
-                ctx.send(make_string_response(http::status::bad_request, 
+                return ctx.send(make_string_response(http::status::bad_request, 
                     rq.version(), "Illegal request-target"));
-                return;
             }
             
             // Append an HTTP rel-path to a local fs path
@@ -45,13 +47,28 @@ int main(int, char **)
 
             // Attempt to open a file and respond to the request
             auto rp = make_file_response(rq.version(), path);
-
-            ctx.send(std::move(rp));
+            if (rp.result() != http::status::ok) {
+                return ctx.send(make_string_response(http::status::not_found,
+                    rq.version(), "Not Found"));
+            }
+        
+            return ctx.send(std::move(rp));
         });
 
     /// Redirect to index.html
     ::router.get(R"(^/$)", [](const beast_http_request &rq, http_context &ctx) {
         ctx.send(make_moved_response(rq.version(), "/index.html"));
+    });
+
+    /// Handle the "update" request
+    ::router.get(R"(^/update$)", [](const beast_http_request &rq, http_context &ctx) {
+        auto now = std::chrono::system_clock::now();
+        auto itt = std::chrono::system_clock::to_time_t(now);
+
+        std::stringstream i_str;
+        i_str << std::put_time(std::gmtime(&itt), "%FT%TZ");
+        ctx.send(make_string_response(http::status::ok,
+                    rq.version(), i_str.str()));
     });
 
     /// Define callbacks for the listener

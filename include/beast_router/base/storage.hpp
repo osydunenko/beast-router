@@ -30,7 +30,17 @@ public:
 
     using container_type = std::vector<std::unique_ptr<callback>>;
 
-    storage() = delete;
+    storage() = default;
+
+    storage(const storage &) = delete;
+
+    self_type &operator=(const storage &) = delete;
+
+    storage(storage &&) = default;
+
+    self_type &operator=(storage &&) = default;
+
+    ~storage() = default;
 
     template<
         class ...OnRequest,
@@ -72,13 +82,14 @@ public:
         return m_clbs.size();
     }
 
-    void begin_execute(const request_type &request, context_type &&ctx, std::smatch &&match)
+    bool begin_execute(const request_type &request, context_type &&ctx, std::smatch &&match)
     {
         for (size_t idx = 0; idx < m_clbs.size(); ++idx) {
             if (!(*m_clbs[idx])(request, ctx, match)) {
-                break;
+                return false;
             }
         }
+        return true;
     }
 
 private:

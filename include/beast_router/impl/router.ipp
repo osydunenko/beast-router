@@ -6,6 +6,7 @@ template<class Session>
 router<Session>::router()
     : m_method_map{nullptr}
 {
+    not_found(&router<Session>::not_found_handler);
 }
 
 template<class Session>
