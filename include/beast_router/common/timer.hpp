@@ -20,6 +20,9 @@ template<
 >
 class timer
 {
+    static_assert(
+        boost::asio::is_executor<CompletionExecutor>::value,
+        "Timer requirements are not met");
 public:
     /// The self type
     using self_type = timer<TIMER_TEMPLATE_ATTRIBUTES>;
@@ -39,19 +42,19 @@ public:
     /// Constructor
     explicit timer(const CompletionExecutor &executor);
 
-    /// Constructor
+    /// Constructor (disallowed)
     timer(const self_type &) = delete;
 
-    /// Assignment
+    /// Assignment (disallowed)
     self_type &
     operator=(const self_type &) = delete;
 
     /// Constructor
-    timer(self_type &&) = delete;
+    timer(self_type &&) = default;
 
     /// Assignment
     self_type &
-    operator=(self_type &&) = delete;
+    operator=(self_type &&) = default;
 
     /// Sets an expiration time point
     /**

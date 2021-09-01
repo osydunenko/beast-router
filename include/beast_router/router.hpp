@@ -20,7 +20,7 @@ namespace beast_router {
  * ```cpp
  * #include "beast_router.hpp"
  * ...
- * auto clb = [](const beast_http_request &rq, http_context &ctx, const std::smatch &match) {
+ * auto clb = [](const http_server_request &rq, http_server_context &ctx, const std::smatch &match) {
  *      http_string_response rp{boost::beast::http::status::ok, rq.version()};
  *      rp.set(boost::beast::http::field::content_type, "text/html");
  *

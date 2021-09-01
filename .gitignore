@@ -9,6 +9,8 @@ CMakeLists.txt.user
 
 Doxyfile
 
+*.vscode
+
 # Prerequisites
 *.d
 

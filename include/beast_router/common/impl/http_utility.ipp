@@ -5,7 +5,10 @@ namespace beast_router {
 const mime_type::container_type mime_type::mime_types = {
     {"html",    "text/html"},
     {"js",      "application/javascript"},
-    {"css",     "text/css"}
+    {"css",     "text/css"},
+    {"png",     "image/png"},
+    {"jpg",     "image/jpeg"},
+    {"fvl",     "video/x-flv"}
 };
 
 std::string_view mime_type::get(std::string_view ext)
@@ -24,7 +27,7 @@ template<
     class Version,
     class ...Args,
     std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool> = true>
-typename details::response_creator<Body>::return_type
+inline typename details::response_creator<Body>::return_type
 create_response(http::status code, Version version, Args &&...args)
 {
     return details::response_creator<Body>::create(code,

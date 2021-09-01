@@ -36,7 +36,7 @@ struct response_creator
     using return_type = http::response<body_type>;
 
     template<class ...Args>
-    static return_type
+    inline static return_type
     create(http::status code, unsigned version, Args &&...args)
     {
         return return_type{
@@ -55,7 +55,7 @@ struct response_creator<http::empty_body>
     using return_type = http::response<body_type>;
 
     template<class ...Args>
-    static return_type
+    inline static return_type
     create(http::status code, unsigned version, Args &&...)
     {
         return return_type{code, version};
@@ -102,7 +102,7 @@ template<
     std::enable_if_t<
         std::is_convertible_v<Version, unsigned>, bool
     > = true>
-typename details::response_creator<Body>::return_type
+inline typename details::response_creator<Body>::return_type
 create_response(http::status code, Version version, Args &&...args);
 
 /// Creates redirection response within the `Location`

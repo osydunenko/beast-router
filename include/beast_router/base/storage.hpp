@@ -44,15 +44,15 @@ public:
 
     template<
         class ...OnRequest,
-        class = std::enable_if_t<
+        std::enable_if_t<
             utility::is_all_true_v<
                 (
                     std::is_invocable_v<OnRequest, const request_type &, context_type &, const std::smatch &> ||
                     std::is_invocable_v<OnRequest, const request_type &, context_type &> ||
                     std::is_invocable_v<OnRequest, context_type &>
                 )...
-            > && sizeof...(OnRequest) >= 1
-        >
+            > && sizeof...(OnRequest) >= 1, bool
+        > = true
     >
     storage(OnRequest &&...on_request)
         : m_clbs{}
@@ -104,24 +104,46 @@ private:
     {
         using return_type = utility::func_traits_result_t<Func>;
 
+        template<
+            class F = Func,
+            std::enable_if_t<
+                std::is_invocable_v<F, const request_type &, context_type &, const std::smatch &>, bool
+            > = true
+        > 
         callback_impl(Func &&func)
         {
-            if constexpr (std::is_invocable_v<Func, const request_type &, context_type &, const std::smatch &>) {
-                m_func = std::bind<return_type>(
-                    std::forward<Func>(func),
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    std::placeholders::_3);
-            } else if constexpr (std::is_invocable_v<Func, const request_type &, context_type &>) {
-                m_func = std::bind<return_type>(
-                    std::forward<Func>(func),
-                    std::placeholders::_1,
-                    std::placeholders::_2);
-            } else if constexpr (std::is_invocable_v<Func, context_type &>) {
-                m_func = std::bind<return_type>(
-                    std::forward<Func>(func),
-                    std::placeholders::_2);
-            }
+            m_func = std::bind<return_type>(
+                std::forward<Func>(func),
+                std::placeholders::_1,
+                std::placeholders::_2,
+                std::placeholders::_3);
+        }
+
+        template<
+            class F = Func,
+            std::enable_if_t<
+                std::is_invocable_v<F, const request_type &, context_type &>, bool
+            > = true
+        > 
+        callback_impl(Func &&func)
+        {
+            m_func = std::bind<return_type>(
+                std::forward<Func>(func),
+                std::placeholders::_1,
+                std::placeholders::_2);
+        }
+
+        template<
+            class F = Func,
+            std::enable_if_t<
+                std::is_invocable_v<F, context_type &>, bool
+            > = true
+        >
+        callback_impl(Func &&func)
+        {
+            m_func = std::bind<return_type>(
+                std::forward<Func>(func),
+                std::placeholders::_2);
         }
 
         bool operator()(const request_type &request, context_type &ctx, const std::smatch &match) override

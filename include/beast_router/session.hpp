@@ -1,7 +1,6 @@
 #pragma once
 
-#include <any>
-#include <regex>
+#include <any> 
 #include <algorithm>
 #include <type_traits>
 #include <string_view>
@@ -24,7 +23,7 @@
 #include "router.hpp"
 
 #define SESSION_TEMPLATE_ATTRIBUTES \
-    Body, RequestParser, Buffer, Protocol, Socket
+    IsRequest, Body, Buffer, Protocol, Socket
 
 namespace beast_router {
 
@@ -33,8 +32,8 @@ namespace beast_router {
  * The common class which handles all the active sessions and dispatch them through the loop
  */
 template<
+    bool IsRequest = true,
     class Body = boost::beast::http::string_body,
-    class RequestParser = boost::beast::http::request_parser<Body>,
     class Buffer = boost::beast::flat_buffer,
     class Protocol = boost::asio::ip::tcp,
     class Socket = boost::asio::basic_stream_socket<Protocol>
@@ -54,18 +53,9 @@ public:
     using body_type = Body;
 
     /// The request type
-    using request_type = boost::beast::http::request<body_type>;
-
-    /// The response type 
-    template<class ResponseBody>
-    using response_type = boost::beast::http::response<ResponseBody>;
-
-    /// The response serializer type
-    template<class ResponseBody>
-    using response_serializer_type = boost::beast::http::response_serializer<ResponseBody>;
-
-    /// The request parser type
-    using request_parser_type = RequestParser;
+    using request_type = std::conditional_t<IsRequest,
+          boost::beast::http::request<body_type>,
+          boost::beast::http::response<body_type>>;
 
     /// The buffer type
     using buffer_type = Buffer;
@@ -118,20 +108,20 @@ public:
     /// Typedef definition for the Queue
     using conn_queue_type = base::conn_queue<impl_type>;
 
-    /// The method for receiving data from a connection
+    /// The method for receiving data
     /**
      * The method receives data send by a connection
      *
      * @param socket An rvalue reference to the socket
      * @param router A const reference to the Router
-     * @param onAction A list of callbacks 
+     * @param on_action A list of callbacks 
      * @returns context_type
      */
     template<class ...OnAction>
     static context_type
-    recv(socket_type &&socket, const router_type &router, OnAction &&...onAction);
+    recv(socket_type &&socket, const router_type &router, OnAction &&...on_action);
 
-    /// The method for receiving data from a connection whithin the timeout
+    /// The method for receiving data whithin the given timeout
     /**
      * The method receives data send by a connection whithin the given duration
      * by creating a timer
@@ -139,18 +129,24 @@ public:
      * @param socket An rvalue reference ot the socket
      * @param router A const reference to the Router
      * @param duration A duration for handling the timeout
-     * @param onAction A list of callbacks
+     * @param on_action A list of callbacks
      * @returns context_type
      */
     template<class TimeDuration, class ...OnAction>
     static context_type
-    recv(socket_type &&socket, const router_type &router, TimeDuration &&duration, OnAction &&...onAction);
+    recv(socket_type &&socket, const router_type &router, TimeDuration &&duration, OnAction &&...on_action);
+
+    /// The method for sending data
+    template<class Request, class ...OnAction>
+    static context_type
+    send(socket_type &&socket, Request &&request, const router_type &router, OnAction &&...on_action);
 
 private:
     template<class ...OnAction>
-    static context_type init_context(socket_type &&socket, const router_type &router, OnAction &&...onAction);
+    static context_type init_context(socket_type &&socket, const router_type &router, OnAction &&...on_action);
 
-    class impl: public base::strand_stream, public std::enable_shared_from_this<impl>
+    class impl: public base::strand_stream, 
+        public std::enable_shared_from_this<impl>
     {
         template<class>
         friend class context;
@@ -159,9 +155,14 @@ private:
         friend class base::conn_queue;
 
         using method_const_map_pointer = typename router_type::method_const_map_pointer;
+        using request_parser_type = boost::beast::http::request_parser<body_type>;
+        using response_parser_type = boost::beast::http::response_parser<body_type>;
 
     public:
         using self_type = impl;
+
+        using parser_type = std::conditional_t<IsRequest, 
+              request_parser_type, response_parser_type>;
 
         explicit impl(socket_type &&socket, mutex_type &mutex, buffer_type &&buffer,
             method_const_map_pointer method_map,
@@ -176,13 +177,18 @@ private:
     private:
         void do_timer(timer_duration_type duraion);
         void on_timer(boost::system::error_code ec);
+
         void do_read();
         void on_read(boost::system::error_code ec, size_t bytes_transferred);
+
         void do_eof(shutdown_type type);
-        void do_process_request();
-        void provide(request_type &&request);
-        template<class ResponseBody>
-        void do_write(response_type<ResponseBody> &response);
+
+        template<bool IsMessageRequest, class MessageBody, class Fields>
+        typename std::enable_if_t<IsMessageRequest>
+        do_process_request(boost::beast::http::message<IsMessageRequest, MessageBody, Fields> &&request);
+
+        template<bool IsMessageRequest, class MessageBody, class Fields>
+        void do_write(boost::beast::http::message<IsMessageRequest, MessageBody, Fields> &message);
         void on_write(boost::system::error_code ec, std::size_t bytes_transferred, bool close);
 
     private:
@@ -190,11 +196,11 @@ private:
         timer_type m_timer;
         mutex_type &m_mutex;
         buffer_type m_buffer;
-        request_parser_type m_parser;
         method_const_map_pointer m_method_map; 
         on_error_type m_on_error;
         conn_queue_type m_queue;
         std::any m_serializer;
+        parser_type m_parser;
     };
 
 public:
@@ -209,7 +215,7 @@ public:
         static_assert(
             std::is_base_of_v<
                 boost::asio::strand<boost::asio::system_timer::executor_type>, Impl>,
-            "Context requirements are not met");
+            "context requirements are not met");
         
     public:
         /// Constructor

@@ -53,6 +53,7 @@ struct is_class_creatable
 
     template<class C, class ...A>
     static auto test(int) -> decltype(C{std::declval<A>()...}, one());
+
     template<class C, class ...A>
     static two test(...);
 

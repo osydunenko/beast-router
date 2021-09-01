@@ -1,11 +1,29 @@
 #pragma once
 
 namespace beast_router {
+namespace details {
+
+template<bool IsRequest, class Body>
+struct serializer;
+
+template<class Body>
+struct serializer<true, Body>
+{
+    using type = boost::beast::http::request_serializer<Body>;
+};
+
+template<class Body>
+struct serializer<false, Body>
+{
+    using type = boost::beast::http::response_serializer<Body>;
+};
+
+} // namespace details
 
 #define SESSION_TEMPLATE_DECLARE \
     template<                 \
+    bool IsRequest,           \
     class Body,               \
-    class RequestParser,      \
     class Buffer,             \
     class Protocol,           \
     class Socket              \
@@ -14,9 +32,9 @@ namespace beast_router {
 SESSION_TEMPLATE_DECLARE
 template<class ...OnAction>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
-session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_type &router, OnAction &&...onAction)
+session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_type &router, OnAction &&...on_action)
 {
-    context_type ctx = init_context(std::move(socket), router, std::forward<OnAction>(onAction)...);
+    context_type ctx = init_context(std::move(socket), router, std::forward<OnAction>(on_action)...);
     ctx.recv();
     return ctx;
 }
@@ -24,17 +42,27 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_ty
 SESSION_TEMPLATE_DECLARE
 template<class TimeDuration, class ...OnAction>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
-session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_type &router, TimeDuration &&duration, OnAction &&...onAction)
+session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type &&socket, const router_type &router, TimeDuration &&duration, OnAction &&...on_action)
 {
-    context_type ctx = init_context(std::move(socket), router, std::forward<OnAction>(onAction)...);
+    context_type ctx = init_context(std::move(socket), router, std::forward<OnAction>(on_action)...);
     ctx.recv(std::forward<TimeDuration>(duration));
+    return ctx;
+}
+
+SESSION_TEMPLATE_DECLARE
+template<class Request, class ...OnAction>
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
+session<SESSION_TEMPLATE_ATTRIBUTES>::send(socket_type &&socket, Request &&request, const router_type &router, OnAction &&...on_action)
+{
+    context_type ctx = init_context(std::move(socket), router, std::forward<OnAction>(on_action)...);
+    ctx.send(std::forward<Request>(request));
     return ctx;
 }
 
 SESSION_TEMPLATE_DECLARE
 template<class ...OnAction>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
-session<SESSION_TEMPLATE_ATTRIBUTES>::init_context(socket_type &&socket, const router_type &router, OnAction &&...onAction)
+session<SESSION_TEMPLATE_ATTRIBUTES>::init_context(socket_type &&socket, const router_type &router, OnAction &&...on_action)
 {
     buffer_type buffer;
     return context_type{*std::make_shared<impl_type>(
@@ -42,7 +70,7 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::init_context(socket_type &&socket, const r
         router.get_mutex(), 
         std::move(buffer),
         router.get_resource_map(),
-        std::forward<OnAction>(onAction)...)
+        std::forward<OnAction>(on_action)...)
     };
 }
 
@@ -55,11 +83,11 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::impl::impl(socket_type &&socket, mutex_typ
     , m_timer{static_cast<base::strand_stream &>(*this)}
     , m_mutex{mutex}
     , m_buffer{std::move(buffer)}
-    , m_parser{}
     , m_method_map{method_map}
     , m_on_error{on_error}
     , m_queue{*this}
     , m_serializer{}
+    , m_parser{}
 {
 }
 
@@ -113,8 +141,12 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_timer(boost::system::error_c
 SESSION_TEMPLATE_DECLARE
 void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_read()
 {
-    m_connection.async_read(m_buffer, m_parser,
-        std::bind(&impl::on_read, this->shared_from_this(), std::placeholders::_1, std::placeholders::_2)
+    m_connection.async_read(
+        m_buffer, 
+        m_parser,
+        std::bind(&impl::on_read, 
+            this->shared_from_this(), 
+            std::placeholders::_1, std::placeholders::_2)
     );
 }
 
@@ -134,7 +166,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_read(boost::system::error_co
         m_on_error(ec, "async_read/on_read");
     }
 
-    do_process_request();
+    do_process_request(m_parser.release());
 }
 
 SESSION_TEMPLATE_DECLARE
@@ -143,6 +175,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_eof(shutdown_type type)
     if (!m_connection.is_open()) {
         return;
     }
+
     const auto ec = m_connection.shutdown(type);
     if (ec && m_on_error) {
         m_on_error(ec, "shutdown/eof");
@@ -150,20 +183,20 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_eof(shutdown_type type)
 }
 
 SESSION_TEMPLATE_DECLARE
-void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_process_request()
+template<bool IsMessageRequest, class MessageBody, class Fields>
+typename std::enable_if_t<IsMessageRequest> 
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_process_request(boost::beast::http::message<IsMessageRequest, MessageBody, Fields> &&request)
 {
-    request_type request = m_parser.release();
+    static_assert(utility::is_all_true_v<
+        IsRequest == IsMessageRequest,
+        std::is_same_v<MessageBody, body_type>
+    >, "session::do_process_request requirements are not met");
 
-    LOCKABLE_ENTER_TO_READ(m_mutex);  
-    provide(std::move(request));
-}
+    LOCKABLE_ENTER_TO_READ(m_mutex);
 
-SESSION_TEMPLATE_DECLARE
-void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::provide(request_type &&request)
-{
     boost::string_view target = request.target(); 
     method_type method = request.method();
-    
+
     auto make_context = [this]() mutable
         -> context_type {
         return context_type{*this};
@@ -201,12 +234,13 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::provide(request_type &&request)
 }
 
 SESSION_TEMPLATE_DECLARE
-template<class ResponseBody>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_write(response_type<ResponseBody> &response)
+template<bool IsMessageRequest, class MessageBody, class Fields>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_write(boost::beast::http::message<IsMessageRequest, MessageBody, Fields> &message)
 {
-    using serializer_type = response_serializer_type<ResponseBody>;
+    using serializer_type = typename details::serializer<IsMessageRequest, MessageBody>::type;
 
-    m_serializer = serializer_type(response);
+    m_serializer = std::make_any<serializer_type>(message);
+
     m_connection.async_write(
         std::any_cast<serializer_type &>(m_serializer),
         std::bind(
@@ -214,7 +248,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_write(response_type<Response
             this->shared_from_this(),
             std::placeholders::_1,
             std::placeholders::_2,
-            response.need_eof()
+            message.need_eof()
         )
     );
 }
@@ -226,8 +260,13 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_write(boost::system::error_c
 
     m_timer.cancel();
 
+    if (ec == boost::beast::http::error::end_of_stream) {
+        do_eof(shutdown_type::shutdown_both);
+        return;
+    }
+
     if (ec && m_on_error) {
-        m_on_error(ec, "async_read/on_write");
+        m_on_error(ec, "async_write/on_write");
         return;
     }
 

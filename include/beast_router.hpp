@@ -7,6 +7,7 @@
 #include "beast_router/listener.hpp"
 #include "beast_router/session.hpp"
 #include "beast_router/router.hpp"
+#include "beast_router/connector.hpp"
 
 #include "beast_router/common/http_utility.hpp"
 
@@ -15,16 +16,19 @@ namespace beast_router {
 /// The default listener type
 using http_listener = listener<>;
 
-/// The default session type
-using http_session = session<>;
+/// The connector type
+using http_connector = connector<>;
 
-/// The default router type
-using http_router = router<http_session>;
+/// The default http server session type
+using http_server_session = session<>;
+
+/// The default server router type
+using http_server_router = router<http_server_session>;
 
 /// HTTP context
-using http_context = typename http_session::context_type;
+using http_server_context = typename http_server_session::context_type;
 
-/// Beast HTTP Request type
-using beast_http_request = typename http_session::request_type;
+/// HTTP server Request type
+using http_server_request = typename http_server_session::request_type;
 
 } // namespace beast_router

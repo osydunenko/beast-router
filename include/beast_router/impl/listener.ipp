@@ -5,7 +5,7 @@
     class Protocol,                       \
     class Acceptor,                       \
     class Socket,                         \
-    template<typename> class Endpoint >
+    template<typename> class Endpoint>
 
 #define CHECK_EC(ec, msg)         \
     if (ec) {                     \
@@ -77,6 +77,7 @@ void listener<LISTENER_TEMPLATE_ATTRIBUTES>::on_accept(boost::system::error_code
 LISTENER_TEMPLATE_DECLARE
 void listener<LISTENER_TEMPLATE_ATTRIBUTES>::on_spawn_connect(boost::system::error_code ec, socket_type &socket)
 {
+    assert(m_on_accept != nullptr);
     CHECK_EC(ec, "accept/loop");
     m_on_accept(std::move(socket));
 }

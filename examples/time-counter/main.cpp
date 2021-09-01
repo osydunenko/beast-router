@@ -1,5 +1,6 @@
 #include <string_view>
 #include <sstream>
+#include <iostream>
 #include <iomanip>
 #include <chrono>
 #include <vector>
@@ -24,13 +25,13 @@ static asio::io_context ioc;
 static asio::signal_set sig_int_term{ioc, SIGINT, SIGTERM};
 
 /// routing table
-static http_router router;
+static http_server_router router;
 
 int main(int, char **)
 {
     /// Add handler for the static content
     ::router.get(R"(^.*\.(js|html|css)$)", 
-        [](const beast_http_request &rq, http_context &ctx) {
+        [](const http_server_request &rq, http_server_context &ctx) {
             // Request path must be absolute and not contain ".."
             if (rq.target().empty() ||
                 rq.target()[0] != '/' ||
@@ -56,12 +57,12 @@ int main(int, char **)
         });
 
     /// Redirect to index.html
-    ::router.get(R"(^/$)", [](const beast_http_request &rq, http_context &ctx) {
+    ::router.get(R"(^/$)", [](const http_server_request &rq, http_server_context &ctx) {
         ctx.send(make_moved_response(rq.version(), "/index.html"));
     });
 
     /// Handle the "update" request
-    ::router.get(R"(^/update$)", [](const beast_http_request &rq, http_context &ctx) {
+    ::router.get(R"(^/update$)", [](const http_server_request &rq, http_server_context &ctx) {
         auto now = std::chrono::system_clock::now();
         auto itt = std::chrono::system_clock::to_time_t(now);
 
@@ -74,11 +75,13 @@ int main(int, char **)
     /// Define callbacks for the listener
     http_listener::on_error_type on_error = [](system::error_code ec, std::string_view) {
         if (ec == system::errc::address_in_use ||
-            ec == system::errc::permission_denied)
-            ioc.stop();
+            ec == system::errc::permission_denied) {
+                std::cout << "An error occured: cannot bind to..." << std::endl;
+                ioc.stop();
+        }
     };
     http_listener::on_accept_type on_accept = [&on_error](http_listener::socket_type socket) {
-        http_session::recv(std::move(socket), ::router, 5s, on_error);
+        http_server_session::recv(std::move(socket), ::router, 5s, on_error);
     };
 
     /// Start listening

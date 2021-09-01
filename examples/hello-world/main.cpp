@@ -1,6 +1,7 @@
 #include <atomic>
 #include <vector>
 #include <sstream>
+#include <iostream>
 #include "beast_router.hpp"
 
 using namespace std;
@@ -23,12 +24,12 @@ static asio::io_context ioc;
 static asio::signal_set sig_int_term{ioc, SIGINT, SIGTERM};
 
 /// routing table
-static http_router router;
+static http_server_router router;
 
 int main(int, char **)
 {
     /// Define the callback
-    auto clb = [](const beast_http_request &rq, http_context &ctx) {
+    auto clb = [](const http_server_request &rq, http_server_context &ctx) {
         stringstream i_str;
         i_str << "Hello World: the request was triggered [" << ++counter << "] times";
 
@@ -48,7 +49,7 @@ int main(int, char **)
             ioc.stop();
     };
     http_listener::on_accept_type on_accept = [&on_error](http_listener::socket_type socket) {
-        http_session::recv(std::move(socket), ::router, 5s, on_error);
+        http_server_session::recv(std::move(socket), ::router, 5s, on_error);
     };
 
     /// Start listening
