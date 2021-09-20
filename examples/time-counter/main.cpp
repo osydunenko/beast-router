@@ -25,13 +25,13 @@ static asio::io_context ioc;
 static asio::signal_set sig_int_term{ioc, SIGINT, SIGTERM};
 
 /// routing table
-static http_server_router router;
+static http_server::router_type router;
 
 int main(int, char **)
 {
     /// Add handler for the static content
     ::router.get(R"(^.*\.(js|html|css)$)", 
-        [](const http_server_request &rq, http_server_context &ctx) {
+        [](const http_server::message_type &rq, http_server::context_type &ctx) {
             // Request path must be absolute and not contain ".."
             if (rq.target().empty() ||
                 rq.target()[0] != '/' ||
@@ -57,12 +57,12 @@ int main(int, char **)
         });
 
     /// Redirect to index.html
-    ::router.get(R"(^/$)", [](const http_server_request &rq, http_server_context &ctx) {
+    ::router.get(R"(^/$)", [](const http_server::message_type &rq, http_server::context_type &ctx) {
         ctx.send(make_moved_response(rq.version(), "/index.html"));
     });
 
     /// Handle the "update" request
-    ::router.get(R"(^/update$)", [](const http_server_request &rq, http_server_context &ctx) {
+    ::router.get(R"(^/update$)", [](const http_server::message_type &rq, http_server::context_type &ctx) {
         auto now = std::chrono::system_clock::now();
         auto itt = std::chrono::system_clock::to_time_t(now);
 
@@ -81,7 +81,7 @@ int main(int, char **)
         }
     };
     http_listener::on_accept_type on_accept = [&on_error](http_listener::socket_type socket) {
-        http_server_session::recv(std::move(socket), ::router, 5s, on_error);
+        http_server::recv(std::move(socket), ::router, 5s, on_error);
     };
 
     /// Start listening

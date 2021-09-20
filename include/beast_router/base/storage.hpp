@@ -22,9 +22,7 @@ public:
 
     using session_type = Session;
 
-    using session_context_type = typename session_type::context_type;
-
-    using request_type = typename session_type::request_type;
+    using message_type = typename session_type::message_type;
 
     using context_type = typename session_type::context_type;
 
@@ -47,8 +45,8 @@ public:
         std::enable_if_t<
             utility::is_all_true_v<
                 (
-                    std::is_invocable_v<OnRequest, const request_type &, context_type &, const std::smatch &> ||
-                    std::is_invocable_v<OnRequest, const request_type &, context_type &> ||
+                    std::is_invocable_v<OnRequest, const message_type &, context_type &, const std::smatch &> ||
+                    std::is_invocable_v<OnRequest, const message_type &, context_type &> ||
                     std::is_invocable_v<OnRequest, context_type &>
                 )...
             > && sizeof...(OnRequest) >= 1, bool
@@ -82,7 +80,7 @@ public:
         return m_clbs.size();
     }
 
-    bool begin_execute(const request_type &request, context_type &&ctx, std::smatch &&match)
+    bool begin_execute(const message_type &request, context_type &&ctx, std::smatch &&match)
     {
         for (size_t idx = 0; idx < m_clbs.size(); ++idx) {
             if (!(*m_clbs[idx])(request, ctx, match)) {
@@ -96,7 +94,7 @@ private:
     struct callback
     {
         virtual ~callback() = default;
-        virtual bool operator()(const request_type &, context_type &, const std::smatch &) = 0;
+        virtual bool operator()(const message_type &, context_type &, const std::smatch &) = 0;
     };
 
     template<class Func>
@@ -107,7 +105,7 @@ private:
         template<
             class F = Func,
             std::enable_if_t<
-                std::is_invocable_v<F, const request_type &, context_type &, const std::smatch &>, bool
+                std::is_invocable_v<F, const message_type &, context_type &, const std::smatch &>, bool
             > = true
         > 
         callback_impl(Func &&func)
@@ -122,7 +120,7 @@ private:
         template<
             class F = Func,
             std::enable_if_t<
-                std::is_invocable_v<F, const request_type &, context_type &>, bool
+                std::is_invocable_v<F, const message_type &, context_type &>, bool
             > = true
         > 
         callback_impl(Func &&func)
@@ -146,7 +144,7 @@ private:
                 std::placeholders::_2);
         }
 
-        bool operator()(const request_type &request, context_type &ctx, const std::smatch &match) override
+        bool operator()(const message_type &request, context_type &ctx, const std::smatch &match) override
         {
             if constexpr (std::is_same_v<return_type, bool>) {
                 return m_func(request, ctx, match);
@@ -156,7 +154,7 @@ private:
             return true;
         }
 
-        std::function<return_type(const request_type &, context_type &, const std::smatch &)> m_func;
+        std::function<return_type(const message_type &, context_type &, const std::smatch &)> m_func;
     };
 
     container_type m_clbs;

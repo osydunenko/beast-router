@@ -13,22 +13,28 @@
 
 namespace beast_router {
 
+template<class Session>
+struct handlers: public Session
+{
+    using session_type = Session;
+
+    using router_type = router<session_type>;
+
+    using context_type = typename session_type::context_type;
+
+    using message_type = typename session_type::message_type;
+};
+
 /// The default listener type
 using http_listener = listener<>;
 
 /// The connector type
 using http_connector = connector<>;
 
-/// The default http server session type
-using http_server_session = session<>;
+/// The server connections handler
+using http_server = handlers<session<true>>;
 
-/// The default server router type
-using http_server_router = router<http_server_session>;
-
-/// HTTP context
-using http_server_context = typename http_server_session::context_type;
-
-/// HTTP server Request type
-using http_server_request = typename http_server_session::request_type;
+/// The client connections handler
+using http_client = handlers<session<false>>;
 
 } // namespace beast_router

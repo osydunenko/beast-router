@@ -27,15 +27,27 @@ template<
     class Version,
     class ...Args,
     std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool> = true>
-inline typename details::response_creator<Body>::return_type
+static typename details::message_creator<false, Body>::return_type
 create_response(http::status code, Version version, Args &&...args)
 {
-    return details::response_creator<Body>::create(code,
+    return details::message_creator<false, Body>::create(code,
         version, std::forward<Args>(args)...);
 }
 
+template<
+    class Body, 
+    class Version,
+    class ...Args,
+    std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool> = true>
+static typename details::message_creator<true, Body>::return_type
+create_request(boost::beast::http::verb verb, Version version, std::string_view target, Args &&...args)
+{
+    return details::message_creator<true, Body>::create(verb,
+        version, target, std::forward<Args>(args)...);
+}
+
 template<class Version>
-http_empty_response make_moved_response(Version version, std::string_view location)
+static http_empty_response make_moved_response(Version version, std::string_view location)
 {
     auto rp = create_response<http::empty_body>(
         http::status::moved_permanently, version);
@@ -44,7 +56,7 @@ http_empty_response make_moved_response(Version version, std::string_view locati
 }
 
 template<class Version>
-http_string_response make_string_response(http::status code, 
+static http_string_response make_string_response(http::status code, 
     Version version, std::string_view data, std::string_view content)
 {
     auto rp = create_response<http::string_body>(code, version, data);
@@ -54,7 +66,7 @@ http_string_response make_string_response(http::status code,
 }
 
 template<class Version>
-http_file_response
+static http_file_response
 make_file_response(Version version, const std::string &file_name)
 {
     boost::beast::error_code ec;
@@ -79,6 +91,13 @@ make_file_response(Version version, const std::string &file_name)
     rp.set(http::field::content_type, 
         mime_type::get(std::move(file_extension)));
     return rp;
+}
+
+template<class Version>
+static http_empty_request
+make_empty_request(boost::beast::http::verb verb, Version version, std::string_view target)
+{
+    return create_request<http::empty_body>(verb, version, target);
 }
 
 } // namespace beast_router

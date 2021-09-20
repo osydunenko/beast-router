@@ -6,8 +6,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 # Options decl.
-option(BUILD_EXAMPLES "Build examples" ON)
+option(BUILD_EXAMPLES "Build examples" OFF)
+option(ROUTER_DOXYGEN "Generate Doxygen" OFF)
+option(BUILD_TESTS "Build tests" OFF)
 
 add_library(${PROJECT_NAME} INTERFACE)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
@@ -40,7 +44,11 @@ target_link_libraries(
         Boost::thread
 )
 
-if (DOXYGEN_FOUND)
+if (ROUTER_DOXYGEN)
+    if (NOT DOXYGEN_FOUND)
+        message(FATAL_ERROR "The project is being built with the 'ROUTER_DOXYGEN=ON' but the doxygen binearies are not found")
+    endif()
+
     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
     set(DOXYGEN_OUT ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile)
     set(DOXYGEN_DOC_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/doc)
@@ -57,6 +65,8 @@ if (DOXYGEN_FOUND)
         VERBATIM
     )
 
+    add_definitions(ROUTER_DOXYGEN=1)
+
     # Exclude the doc target from all
     set_target_properties(doc PROPERTIES EXCLUDE_FROM_ALL TRUE)
 endif()
@@ -65,23 +75,18 @@ if (BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
-include(GNUInstallDirs)
-
-install(
-    TARGETS ${PROJECT_NAME}
-    EXPORT ${PROJECT_NAME}_Targets
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include DESTINATION include)
+if (BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 message(STATUS "-------------------------------------------------------")
 message(STATUS "BUILD_EXAMPLES:..............${BUILD_EXAMPLES}")
+message(STATUS "BUILD_TESTS:.................${BUILD_TESTS}")
 message(STATUS "CMAKE_BUILD_TYPE:............${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_VERSION:...............${CMAKE_VERSION}")
 message(STATUS "CMAKE_C_COMPILER:............${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER:..........${CMAKE_CXX_COMPILER}")
 message(STATUS "DOXYGEN_EXECUTABLE:..........${DOXYGEN_EXECUTABLE}")
+message(STATUS "ROUTER_DOXYGEN:..............${ROUTER_DOXYGEN}")
 message(STATUS "-------------------------------------------------------")

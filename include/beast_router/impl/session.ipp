@@ -54,6 +54,7 @@ template<class Request, class ...OnAction>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
 session<SESSION_TEMPLATE_ATTRIBUTES>::send(socket_type &&socket, Request &&request, const router_type &router, OnAction &&...on_action)
 {
+    static_assert(!IsRequest, "session::send requirements are not met");
     context_type ctx = init_context(std::move(socket), router, std::forward<OnAction>(on_action)...);
     ctx.send(std::forward<Request>(request));
     return ctx;
@@ -67,27 +68,24 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::init_context(socket_type &&socket, const r
     buffer_type buffer;
     return context_type{*std::make_shared<impl_type>(
         std::move(socket), 
-        router.get_mutex(), 
         std::move(buffer),
-        router.get_resource_map(),
-        std::forward<OnAction>(on_action)...)
+        router, std::forward<OnAction>(on_action)...)
     };
 }
 
 SESSION_TEMPLATE_DECLARE
-session<SESSION_TEMPLATE_ATTRIBUTES>::impl::impl(socket_type &&socket, mutex_type &mutex, buffer_type &&buffer, 
-    method_const_map_pointer method_map,
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::impl(socket_type &&socket,  buffer_type &&buffer, 
+    const router_type &router,
     const on_error_type &on_error)
     : base::strand_stream{socket.get_executor()}
     , m_connection{std::move(socket), static_cast<base::strand_stream &>(*this)}
     , m_timer{static_cast<base::strand_stream &>(*this)}
-    , m_mutex{mutex}
     , m_buffer{std::move(buffer)}
-    , m_method_map{method_map}
     , m_on_error{on_error}
     , m_queue{*this}
     , m_serializer{}
     , m_parser{}
+    , m_dispatcher{router}
 {
 }
 
@@ -109,12 +107,12 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::impl::recv(timer_duration_type duration)
 }
 
 SESSION_TEMPLATE_DECLARE
-template<class Response>
+template<class Message>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type &
-session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(Response &&response, timer_duration_type duration)
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(Message &&message, timer_duration_type duration)
 {
     do_timer(std::move(duration));
-    m_queue(std::forward<Response>(response));
+    m_queue(std::forward<Message>(message));
     return *this;
 }
 
@@ -183,54 +181,10 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_eof(shutdown_type type)
 }
 
 SESSION_TEMPLATE_DECLARE
-template<bool IsMessageRequest, class MessageBody, class Fields>
-typename std::enable_if_t<IsMessageRequest> 
-session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_process_request(boost::beast::http::message<IsMessageRequest, MessageBody, Fields> &&request)
+template<class Message>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_process_request(Message &&message)
 {
-    static_assert(utility::is_all_true_v<
-        IsRequest == IsMessageRequest,
-        std::is_same_v<MessageBody, body_type>
-    >, "session::do_process_request requirements are not met");
-
-    LOCKABLE_ENTER_TO_READ(m_mutex);
-
-    boost::string_view target = request.target(); 
-    method_type method = request.method();
-
-    auto make_context = [this]() mutable
-        -> context_type {
-        return context_type{*this};
-    };
-
-    const auto method_pos = m_method_map->find(method);
-    if (method_pos != m_method_map->cend()) {
-        auto &resource_map = method_pos->second;
-        std::for_each(
-            resource_map.begin(),
-            resource_map.end(),
-            [&](auto &val) {
-                const std::regex re{val.first};
-                const std::string target_string = target.to_string();
-                std::smatch base_match;
-                if (std::regex_match(target_string, base_match, re)) {
-                    if (const_cast<storage_type &>(val.second)
-                            .begin_execute(request, make_context(), std::move(base_match))) {
-                        return;
-                    }
-                }
-            }
-        );
-    }
-
-    if (const auto not_found = m_method_map->find(method_type::unknown);
-        not_found != m_method_map->cend()) {
-        auto &resource_map = not_found->second;
-        if (const auto storage = resource_map.find("");
-            storage != resource_map.cend()) {
-            const_cast<storage_type &>(storage->second)
-                .begin_execute(request, make_context(), {});
-        }
-    }
+    m_dispatcher.do_process_request(std::forward<Message>(message), *this);
 }
 
 SESSION_TEMPLATE_DECLARE
@@ -319,18 +273,18 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(TimeDuration &&duratio
 
 SESSION_TEMPLATE_DECLARE
 template<class Impl>
-template<class Response>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(Response &&response) const
+template<class Message>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(Message &&message) const
 {
-    do_send(std::forward<Response>(response), timer_duration_type::max());
+    do_send(std::forward<Message>(message), timer_duration_type::max());
 }
 
 SESSION_TEMPLATE_DECLARE
 template<class Impl>
-template<class Response, class TimeDuration>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(Response &&response, TimeDuration &&duration) const
+template<class Message, class TimeDuration>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(Message &&message, TimeDuration &&duration) const
 {
-    do_send(std::forward<Response>(response), std::forward<TimeDuration>(duration));
+    do_send(std::forward<Message>(message), std::forward<TimeDuration>(duration));
 }
 
 SESSION_TEMPLATE_DECLARE
@@ -367,8 +321,8 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::set_user_data(Type dat
 
 SESSION_TEMPLATE_DECLARE
 template<class Impl>
-template<class Response, class TimeDuration>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::do_send(Response &&response, TimeDuration &&duration) const
+template<class Message, class TimeDuration>
+void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::do_send(Message &&message, TimeDuration &&duration) const
 {
     static_assert(utility::is_chrono_duration_v<TimeDuration>,
         "TimeDuration requirements are not met");
@@ -376,13 +330,13 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::do_send(Response &&res
     assert(m_impl != nullptr);
 
     auto callback = [
-        rsp = std::forward<Response>(response), 
+        msg = std::forward<Message>(message), 
         dur = std::forward<TimeDuration>(duration),
         impl = m_impl->shared_from_this()
     ]() mutable -> Impl &
     {
         return impl->send(
-            std::forward<Response>(rsp), 
+            std::forward<Message>(msg), 
             std::forward<TimeDuration>(dur));
     };
 

@@ -8,6 +8,7 @@
 #include <boost/asio/socket_base.hpp>
 #include <boost/system/error_code.hpp>
 
+#include "base/config.hpp"
 #include "base/strand_stream.hpp"
 #include "common/utility.hpp"
 #include "common/connection.hpp"
