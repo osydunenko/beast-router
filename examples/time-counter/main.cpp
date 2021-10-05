@@ -7,7 +7,7 @@
 #include <map>
 
 #include "beast_router.hpp"
-#include "config.hpp"
+#include "config_ex.hpp"
 
 using namespace boost;
 using namespace beast_router;

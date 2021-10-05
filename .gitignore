@@ -3,9 +3,8 @@ compile_commands.json
 build/*
 doc/*
 
-config.hpp
-
 CMakeLists.txt.user
+config_ex.hpp
 
 Doxyfile
 
