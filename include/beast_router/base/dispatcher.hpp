@@ -57,8 +57,6 @@ public:
 
         assert(m_method_map);
 
-        if (!m_method_map || m_method_map->size() == 0) return;
-
         LOCKABLE_ENTER_TO_READ(m_mutex);
 
         std::string_view target = request.target();

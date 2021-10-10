@@ -69,9 +69,12 @@ public:
      */
     template<
         class ...OnAction,
+#if not ROUTER_DOXYGEN
         std::enable_if_t<
             utility::is_class_creatable_v<self_type, boost::asio::io_context &, OnAction...>, bool
-        > = true>
+        > = true
+#endif
+    >
     static void
     connect(boost::asio::io_context &ctx, std::string_view address, std::string_view port, OnAction &&...on_action)
     {

@@ -38,7 +38,7 @@ namespace beast_router {
  * }
  *
  * g_router.get(R"(^/.*$)", std::move(clb));
- * @code
+ * @endcode
  */
 template<class Session>
 class router
@@ -116,7 +116,7 @@ public:
      *
      * @code
      * std::is_invocable_v<OnRequest, const message_type &, context_type &, const std::smatch &>
-     * @code
+     * @endcode
      * 
      * @param path The <tt>std::string</tt> type and refers to 
      * RegExp associated within the handlers

@@ -40,3 +40,5 @@ function(add_unit_test TARGET)
     )
 
 endfunction()
+
+find_package(Boost REQUIRED COMPONENTS unit_test_framework)

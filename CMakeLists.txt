@@ -50,11 +50,12 @@ if (ROUTER_DOXYGEN)
     endif()
 
     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
-    set(DOXYGEN_OUT ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile)
-    set(DOXYGEN_DOC_OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/doc)
+    set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxyfile)
+    set(DOXYGEN_DOC_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/doc)
+    set(DOXYGEN_INPUT ${CMAKE_CURRENT_SOURCE_DIR}/include/beast_router/)
 
     # configure the file
-    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY)
+    configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY NEWLINE_STYLE UNIX)
 
     # Decl. doc target
     add_custom_target(
@@ -64,11 +65,6 @@ if (ROUTER_DOXYGEN)
         COMMENT "Generating API Documentation"
         VERBATIM
     )
-
-    add_definitions(ROUTER_DOXYGEN=1)
-
-    # Exclude the doc target from all
-    set_target_properties(doc PROPERTIES EXCLUDE_FROM_ALL TRUE)
 endif()
 
 if (BUILD_EXAMPLES)

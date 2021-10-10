@@ -252,7 +252,6 @@ public:
             std::is_base_of_v<
                 boost::asio::strand<boost::asio::system_timer::executor_type>, Impl>,
             "context requirements are not met");
-        
     public:
         /// Constructor
         context(Impl &impl);
@@ -270,12 +269,16 @@ public:
          * @returns void
          */
         template<class TimeDuration>
-        typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>> 
+#if ROUTER_DOXYGEN
+        void
+#else
+        typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
+#endif
         recv(TimeDuration &&duration);
 
         /// The overloaded method does send data back to client
         /**
-         * @param response The messge type associated with the Body
+         * @param message The messge type associated with the Body
          * @returns void
          */
         template<class Message>
@@ -284,7 +287,7 @@ public:
 
         /// The overloaded method does send data back to client within the timeout
         /**
-         * @param response The message type associated with the Body
+         * @param message The message type associated with the Body
          * @param duration A time duration used by the timer
          * @returns void
          */
