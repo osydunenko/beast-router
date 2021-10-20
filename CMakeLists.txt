@@ -12,6 +12,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 option(BUILD_EXAMPLES "Build examples" OFF)
 option(ROUTER_DOXYGEN "Generate Doxygen" OFF)
 option(BUILD_TESTS "Build tests" OFF)
+option(LINK_SSL "Build with openssl" OFF)
 
 add_library(${PROJECT_NAME} INTERFACE)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
@@ -28,6 +29,7 @@ endif()
 # Check prereqs
 find_package(Boost REQUIRED COMPONENTS system thread)
 find_package(Doxygen)
+find_package(OpenSSL COMPONENTS Crypto SSL)
 
 target_include_directories(
     ${PROJECT_NAME}
@@ -42,6 +44,13 @@ target_link_libraries(
     INTERFACE
         Boost::system
         Boost::thread
+        $<$<BOOL:${LINK_SSL}>:OpenSSL::Crypto OpenSSL::SSL>
+)
+
+target_compile_definitions(
+    ${PROJECT_NAME}
+    INTERFACE
+        $<$<BOOL:${LINK_SSL}>:LINK_SSL>
 )
 
 if (ROUTER_DOXYGEN)
@@ -79,10 +88,11 @@ endif()
 message(STATUS "-------------------------------------------------------")
 message(STATUS "BUILD_EXAMPLES:..............${BUILD_EXAMPLES}")
 message(STATUS "BUILD_TESTS:.................${BUILD_TESTS}")
+message(STATUS "ROUTER_DOXYGEN:..............${ROUTER_DOXYGEN}")
+message(STATUS "LINK_SSL:....................${LINK_SSL}")
 message(STATUS "CMAKE_BUILD_TYPE:............${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_VERSION:...............${CMAKE_VERSION}")
 message(STATUS "CMAKE_C_COMPILER:............${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER:..........${CMAKE_CXX_COMPILER}")
-message(STATUS "DOXYGEN_EXECUTABLE:..........${DOXYGEN_EXECUTABLE}")
-message(STATUS "ROUTER_DOXYGEN:..............${ROUTER_DOXYGEN}")
+message(STATUS "DOXYGEN_EXECUTABLE:..........${DOXYGEN_EXECUTABLE}")    
 message(STATUS "-------------------------------------------------------")

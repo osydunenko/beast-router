@@ -5,7 +5,6 @@
 #include <functional>
 
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/socket_base.hpp>
 #include <boost/system/error_code.hpp>
 
 #include "base/config.hpp"
@@ -19,7 +18,7 @@
 namespace beast_router {
 
 /// Makes a client connection to the given host
-template<
+template <
     class Protocol = boost::asio::ip::tcp,
     class Resolver = typename Protocol::resolver,
     class Socket = boost::asio::basic_stream_socket<Protocol>,
@@ -107,14 +106,15 @@ protected:
     void on_connect(boost::beast::error_code ec, typename results_type::endpoint_type ep);
 
 private:
-    using connection_type = connection<socket_type,
-        base::strand_stream::asio_type>;
+    using connection_type = connection<socket_type, base::strand_stream::asio_type>;
     
     resolver_type m_resolver;
     on_connect_type m_on_connect;
     on_error_type m_on_error;
     connection_type m_connection;
 };
+
+using plain_connector = connector<>;
 
 } // namespace beast_router
 

@@ -22,7 +22,7 @@ namespace beast_router {
  * @code
  * #include "beast_router.hpp"
  * ...
- * auto clb = [](const http_server::message_type &rq, http_server::context_type &ctx, const std::smatch &match) {
+ * auto clb = [](const server_session::message_type &rq, server_session::context_type &ctx, const std::smatch &match) {
  *      http_string_response rp{boost::beast::http::status::ok, rq.version()};
  *      rp.set(boost::beast::http::field::content_type, "text/html");
  *
@@ -148,15 +148,11 @@ public:
 #if not ROUTER_DOXYGEN
         bool is_request = session_type::is_request::value,
         std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnRequest...>, bool
+            utility::is_class_creatable_v<storage_type, OnRequest...> &&
+            is_request, bool 
         > = true
 #endif
-    > ROUTER_DECL
-#if ROUTER_DOXYGEN
-    void
-#else
-    typename std::enable_if_t<is_request>
-#endif
+    > ROUTER_DECL void
     get(const std::string &path, OnRequest &&...on_request)
     {
         add_resource(path, method_type::get, storage_type{std::forward<OnRequest>(on_request)...});
@@ -177,15 +173,11 @@ public:
 #if not ROUTER_DOXYGEN
         bool is_request = session_type::is_request::value,
         std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnRequest...>, bool
+            utility::is_class_creatable_v<storage_type, OnRequest...> &&
+            is_request, bool
         > = true
 #endif
-    > ROUTER_DECL
-#if ROUTER_DOXYGEN
-    void
-#else
-    typename std::enable_if_t<is_request>
-#endif
+    > ROUTER_DECL void
     put(const std::string &path, OnRequest &&...on_request)
     {
         add_resource(path, method_type::put, storage_type{std::forward<OnRequest>(on_request)...});
@@ -206,15 +198,11 @@ public:
 #if not ROUTER_DOXYGEN
         bool is_request = session_type::is_request::value,
         std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnRequest...>, bool
+            utility::is_class_creatable_v<storage_type, OnRequest...> &&
+            is_request, bool
         > = true
 #endif
-    > ROUTER_DECL
-#if ROUTER_DOXYGEN
-    void
-#else
-    typename std::enable_if_t<is_request>
-#endif
+    > ROUTER_DECL void
     post(const std::string &path, OnRequest &&...on_request)
     {
         add_resource(path, method_type::post, storage_type{std::forward<OnRequest>(on_request)...});
@@ -235,15 +223,11 @@ public:
 #if not ROUTER_DOXYGEN
         bool is_request = session_type::is_request::value,
         std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnRequest...>, bool
+            utility::is_class_creatable_v<storage_type, OnRequest...> &&
+            is_request, bool
         > = true
 #endif
-    > ROUTER_DECL
-#if ROUTER_DOXYGEN
-    void
-#else
-    typename std::enable_if_t<is_request>
-#endif
+    > ROUTER_DECL void
     delete_(const std::string &path, OnRequest &&...on_request)
     {
         add_resource(path, method_type::delete_, storage_type{std::forward<OnRequest>(on_request)...});
@@ -263,15 +247,11 @@ public:
 #if not ROUTER_DOXYGEN
         bool is_request = session_type::is_request::value,
         std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnAction...>, bool
+            utility::is_class_creatable_v<storage_type, OnAction...> &&
+            is_request, bool
         > = true
 #endif
-    > ROUTER_DECL
-#if ROUTER_DOXYGEN
-    void
-#else
-    typename std::enable_if_t<is_request>
-#endif
+    > ROUTER_DECL void
     not_found(OnAction &&...on_action)
     {
         add_resource("", method_type::unknown, storage_type{std::forward<OnAction>(on_action)...});
@@ -289,15 +269,11 @@ public:
 #if not ROUTER_DOXYGEN
         bool is_request = session_type::is_request::value,
         std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnAction...>, bool
+            utility::is_class_creatable_v<storage_type, OnAction...> &&
+            !is_request, bool
         > = true
 #endif
-    > ROUTER_DECL
-#if ROUTER_DOXYGEN
-    void
-#else
-    typename std::enable_if_t<!is_request>
-#endif
+    > ROUTER_DECL void
     handle_response(OnAction &&...on_action)
     {
         add_resource("", method_type::unknown, storage_type{std::forward<OnAction>(on_action)...});

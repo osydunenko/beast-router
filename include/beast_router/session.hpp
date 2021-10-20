@@ -45,7 +45,7 @@ namespace beast_router {
  * 
  */
 template<
-    bool IsRequest = true,
+    bool IsRequest,
     class Body = boost::beast::http::string_body,
     class Buffer = boost::beast::flat_buffer,
     class Protocol = boost::asio::ip::tcp,
@@ -65,8 +65,7 @@ public:
     using is_request = std::integral_constant<bool, IsRequest>;
 #else
     using is_request = std::conditional_t<IsRequest,
-          std::true_type,
-          std::false_type>;
+          std::true_type, std::false_type>;
 #endif
 
     /// The self type
@@ -336,6 +335,12 @@ public:
         std::any m_user_data;
     };
 };
+
+/// Default http server session
+using server_session = session<true>;
+
+/// Default http client sessionl
+using client_session = session<false>;
 
 } // namespace beast_router
 

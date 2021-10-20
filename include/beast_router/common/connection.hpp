@@ -1,15 +1,9 @@
 #pragma once
 
-#include <boost/asio/bind_executor.hpp>
-#include <boost/asio/connect.hpp>
-#include <boost/asio/buffer.hpp>
-#include <boost/beast/http/write.hpp>
-#include <boost/beast/http/read.hpp>
-
-#include "utility.hpp"
+#include "../base/connection.hpp"
 
 #define CONNECTION_TEMPLATE_ATTRIBUTES \
-    Socket, CompletionExecutor
+    Stream, CompletionExecutor
 
 namespace beast_router {
 
@@ -17,104 +11,62 @@ namespace beast_router {
 /**
  * @note The class is neither copyable nor assignment
  */
-template<class Socket, class CompletionExecutor>
-class connection
+template<class Stream, class CompletionExecutor>
+class connection: public base::connection<
+    connection<Stream, CompletionExecutor>, CompletionExecutor>
 {
-    static_assert(
-        boost::asio::is_executor<CompletionExecutor>::value,
-        "connection requirements are not met");
 public:
     /// The self type
     using self_type = connection<CONNECTION_TEMPLATE_ATTRIBUTES>;
 
-    /// The socket type
-    using socket_type = Socket;
+    /// The stream type
+    using stream_type = Stream;
 
     /// The shutdown type
-    using shutdown_type = typename socket_type::shutdown_type;
+    using shutdown_type = typename stream_type::shutdown_type;
 
     /// Constructor
-    explicit connection(Socket &&socket, const CompletionExecutor &executor);
-
-    /// Constructor (disallowed)
-    connection(const self_type &) = delete;
-
-    /// Assignment (disallowed)
-    self_type &
-    operator=(const self_type &) = delete;
-
-    /// Constructor
-    connection(self_type &&) = default;
-
-    /// Assignment
-    self_type &
-    operator=(self_type &&) = default;
+    explicit connection(Stream &&stream, const CompletionExecutor &executor);
 
     /// Destructor
-    ~connection();
+    ~connection() override;
 
-    /// Asynchronous writer
-    /**
-     * @param serializer A reference to the serializer which is associated with the connection
-     * @param func A reference to the callback
-     * @returns void
-     */
-    template <class Function, class Serializer>
-    void
-    async_write(Serializer &serializer, Function &&func);
-
-    /// Asynchronous reader
-    /**
-     * @param buffer A reference to the buffer associated with the connection
-     * @param parser A reference to the parser associated with the connection
-     * @param func A reference to the callback
-     * @returns void
-     */
-    template <class Function, class Buffer, class Parser>
-    void
-    async_read(Buffer &buffer, Parser &parser, Function &&func);
-
-    /// Asynchronous connection
-    /**
-     * @param endpoint The endpoints sequence
-     * @param func A reference to the callback
-     * @returns void
-     */
-    template <class Function, class EndpointSequence>
-    void
-    async_connect(const EndpointSequence &endpoints, Function &&func);
-
-    /// Shutdowns a connection
+    /// Shutes down the connection
     /**
      * @param type The shutdown parameter
      * @returns error_code
      */
-    boost::beast::error_code
+    ROUTER_DECL boost::beast::error_code
     shutdown(shutdown_type type);
 
-    /// Closes a connection
+    /// Closes the connection
     /**
      * @returns error_code
      */
-    boost::beast::error_code
+    ROUTER_DECL boost::beast::error_code
     close();
 
-    /// Obtains a connection status
+    /// Obtains the connection state
     /**
      * @returns bool
      */
-    bool
+    ROUTER_DECL bool
     is_open() const;
 
-    /// Returns a socket and releases the ownership
+    /// Returns the stream and releases the ownership
     /**
-     * @returns socket
+     * @returns stream_type
      */
-    socket_type release();
+    ROUTER_DECL stream_type release();
+
+    /// Obtains the reference to the stream
+    /**
+     * @returns stream_type
+     */
+    ROUTER_DECL stream_type &stream();
 
 private:
-    Socket m_socket;
-    const CompletionExecutor &m_complition_executor;
+    stream_type m_stream;
 };
 
 } // namespace beast_router

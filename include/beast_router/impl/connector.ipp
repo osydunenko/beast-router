@@ -9,8 +9,6 @@
 
 namespace beast_router {
 
-namespace net = boost::asio;
-
 CONNECTOR_TEMPLATE_DECLARE
 connector<CONNECTOR_TEMPLATE_ATTRIBUTES>::connector(boost::asio::io_context &ctx, on_connect_type &&on_connect)
     : base::strand_stream{ctx.get_executor()}
@@ -52,7 +50,10 @@ void connector<CONNECTOR_TEMPLATE_ATTRIBUTES>::on_resolve(boost::beast::error_co
     }
 
     m_connection.async_connect(std::move(results), 
-        std::bind(&self_type::on_connect,
+        std::bind(
+            static_cast<
+                void (self_type::*)(boost::beast::error_code, typename results_type::endpoint_type)
+            >(&self_type::on_connect),
             this->shared_from_this(),
             std::placeholders::_1,
             std::placeholders::_2

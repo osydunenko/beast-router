@@ -32,7 +32,7 @@ namespace beast_router {
  *  };
 
  *  http_listener::on_accept_type on_accept = [&on_error](http_listener::socket_type socket) {
- *      http_server::session_type::recv(std::move(socket), g_router, 5s, on_error);
+ *      server_session::recv(std::move(socket), g_router, 5s, on_error);
  *  };
 
  *  const auto address = boost::asio::ip::address_v4::any();
@@ -129,6 +129,9 @@ private:
     on_error_type m_on_error;
     endpoint_type m_endpoint;
 };
+
+/// Default http listener
+using http_listener = listener<>;
 
 } // namespace beast_router
 

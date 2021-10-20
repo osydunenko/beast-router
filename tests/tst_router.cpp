@@ -26,7 +26,7 @@ struct tst_session
 
     using impl_type = impl;
 
-    using context_type = beast_router::http_server::session_type::context<impl_type>;
+    using context_type = beast_router::server_session::context<impl_type>;
 
     using router_type = beast_router::router<tst_session>;
 

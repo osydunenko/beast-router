@@ -24,12 +24,12 @@ static asio::io_context ioc;
 static asio::signal_set sig_int_term{ioc, SIGINT, SIGTERM};
 
 /// routing table
-static http_server::router_type router;
+static server_session::router_type router;
 
 int main(int, char **)
 {
     /// Define the callback
-    auto clb = [](const http_server::message_type &rq, http_server::context_type &ctx) {
+    auto clb = [](const server_session::message_type &rq, server_session::context_type &ctx) {
         stringstream i_str;
         i_str << "Hello World: the request was triggered [" << ++counter << "] times";
 
@@ -49,7 +49,7 @@ int main(int, char **)
             ioc.stop();
     };
     http_listener::on_accept_type on_accept = [&on_error](http_listener::socket_type socket) {
-        http_server::recv(std::move(socket), ::router, 5s, on_error);
+        server_session::recv(std::move(socket), ::router, 5s, on_error);
     };
 
     /// Start listening
