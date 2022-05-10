@@ -3,18 +3,18 @@
 namespace beast_router {
 
 const mime_type::container_type mime_type::mime_types = {
-    {"html",    "text/html"},
-    {"js",      "application/javascript"},
-    {"css",     "text/css"},
-    {"png",     "image/png"},
-    {"jpg",     "image/jpeg"},
-    {"fvl",     "video/x-flv"}
+    { "html", "text/html" },
+    { "js", "application/javascript" },
+    { "css", "text/css" },
+    { "png", "image/png" },
+    { "jpg", "image/jpeg" },
+    { "fvl", "video/x-flv" }
 };
 
 std::string_view mime_type::get(std::string_view ext)
 {
     std::string_view ret = mime_type::default_mime;
-    const mime_type::container_type &types = mime_type::mime_types;
+    const mime_type::container_type& types = mime_type::mime_types;
     if (auto it = types.find(ext); it != types.end()) {
         ret = it->second;
     }
@@ -22,31 +22,31 @@ std::string_view mime_type::get(std::string_view ext)
     return ret;
 }
 
-template<
-    class Body, 
+template <
+    class Body,
     class Version,
-    class ...Args,
+    class... Args,
     std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool>>
 static typename details::message_creator<false, Body>::return_type
-create_response(http::status code, Version version, Args &&...args)
+create_response(http::status code, Version version, Args&&... args)
 {
     return details::message_creator<false, Body>::create(code,
         version, std::forward<Args>(args)...);
 }
 
-template<
-    class Body, 
+template <
+    class Body,
     class Version,
-    class ...Args,
+    class... Args,
     std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool>>
 static typename details::message_creator<true, Body>::return_type
-create_request(boost::beast::http::verb verb, Version version, std::string_view target, Args &&...args)
+create_request(boost::beast::http::verb verb, Version version, std::string_view target, Args&&... args)
 {
     return details::message_creator<true, Body>::create(verb,
         version, target, std::forward<Args>(args)...);
 }
 
-template<class Version>
+template <class Version>
 static http_empty_response make_moved_response(Version version, std::string_view location)
 {
     auto rp = create_response<http::empty_body>(
@@ -55,8 +55,8 @@ static http_empty_response make_moved_response(Version version, std::string_view
     return rp;
 }
 
-template<class Version>
-static http_string_response make_string_response(http::status code, 
+template <class Version>
+static http_string_response make_string_response(http::status code,
     Version version, std::string_view data, std::string_view content)
 {
     auto rp = create_response<http::string_body>(code, version, data);
@@ -65,9 +65,9 @@ static http_string_response make_string_response(http::status code,
     return rp;
 }
 
-template<class Version>
+template <class Version>
 static http_file_response
-make_file_response(Version version, const std::string &file_name)
+make_file_response(Version version, const std::string& file_name)
 {
     boost::beast::error_code ec;
     http::file_body::value_type body;
@@ -88,12 +88,12 @@ make_file_response(Version version, const std::string &file_name)
     auto rp = create_response<http::file_body>(
         http::status::ok, version, std::move(body));
     rp.content_length(size);
-    rp.set(http::field::content_type, 
+    rp.set(http::field::content_type,
         mime_type::get(std::move(file_extension)));
     return rp;
 }
 
-template<class Version>
+template <class Version>
 static http_empty_request
 make_empty_request(boost::beast::http::verb verb, Version version, std::string_view target)
 {

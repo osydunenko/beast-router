@@ -56,6 +56,7 @@ target_compile_definitions(
 find_package(Boost REQUIRED COMPONENTS system thread)
 find_package(Doxygen)
 find_package(OpenSSL COMPONENTS Crypto SSL)
+find_program(CLANGFORMAT_PATH clang-format)
 
 target_include_directories(
     ${PROJECT_NAME}
@@ -104,6 +105,18 @@ if (ROUTER_DOXYGEN)
         VERBATIM
     )
 endif()
+
+# Decl. clang-format target
+file(GLOB_RECURSE SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/*)
+add_custom_target(
+    clangformat
+    COMMAND ${CLANGFORMAT_PATH} -i -style=WebKit ${SRCS}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/include
+    COMMENT "Fomatting the code with ${CLANGFORMAT_PATH}"
+    VERBATIM
+)
+# Exclude the coverage target from all
+set_target_properties(clangformat PROPERTIES EXLCLUDE_FROM_ALL TRUE)
 
 if (BUILD_EXAMPLES)
     add_subdirectory(examples)

@@ -1,23 +1,23 @@
 #pragma once
 
-#include <any> 
 #include <algorithm>
-#include <type_traits>
+#include <any>
 #include <string_view>
+#include <type_traits>
 
-#include <boost/beast/http/string_body.hpp>
-#include <boost/beast/core/flat_buffer.hpp>
-#include <boost/beast/http/serializer.hpp>
-#include <boost/beast/http/parser.hpp>
-#include <boost/asio/socket_base.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/socket_base.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
+#include <boost/beast/http/parser.hpp>
+#include <boost/beast/http/serializer.hpp>
+#include <boost/beast/http/string_body.hpp>
 
-#include "base/dispatcher.hpp"
-#include "base/strand_stream.hpp"
 #include "base/conn_queue.hpp"
+#include "base/dispatcher.hpp"
 #include "base/lockable.hpp"
 #include "base/storage.hpp"
+#include "base/strand_stream.hpp"
 #include "common/connection.hpp"
 #include "common/timer.hpp"
 #include "router.hpp"
@@ -29,31 +29,28 @@ namespace beast_router {
 
 /// Encapsulates the sessions handling associated with a buffer
 /**
- * The common class which handles all the active sessions and 
+ * The common class which handles all the active sessions and
  * dispatch them through the event loop. The class is associated
  * within the following attributes:
- * 
+ *
  * @li IsRequest -- Defines belonging to the mode of a session a.k.a. server versus client
  * @li Body -- configures the body type used for the incoming messages
  * @li Buffer -- A flat buffer which uses the default allocator
  * @li Protocol -- Defines a protocl used for
  * @li Socket -- Defines a sicket type
- * 
+ *
  */
-template<
+template <
     bool IsRequest,
     class Body = boost::beast::http::string_body,
     class Buffer = boost::beast::flat_buffer,
     class Protocol = boost::asio::ip::tcp,
-    class Socket = boost::asio::basic_stream_socket<Protocol>
->
-class session
-{
+    class Socket = boost::asio::basic_stream_socket<Protocol>>
+class session {
     class impl;
 
 public:
-
-    template<class>
+    template <class>
     class context;
 
     /// Indicates if session serves as a server or a client
@@ -61,7 +58,7 @@ public:
     using is_request = std::integral_constant<bool, IsRequest>;
 #else
     using is_request = std::conditional_t<IsRequest,
-          std::true_type, std::false_type>;
+        std::true_type, std::false_type>;
 #endif
 
     /// The self type
@@ -75,8 +72,8 @@ public:
     using message_type = boost::beast::http::message<is_request, body_type, Fields>;
 #else
     using message_type = std::conditional_t<IsRequest,
-          boost::beast::http::request<body_type>,
-          boost::beast::http::response<body_type>>;
+        boost::beast::http::request<body_type>,
+        boost::beast::http::response<body_type>>;
 #endif
 
     /// The buffer type
@@ -97,7 +94,7 @@ public:
     /// The context type
     using context_type = context<impl_type>;
 
-    /// The connection type 
+    /// The connection type
     using connection_type = connection<socket_type, base::strand_stream::asio_type>;
 
     /// The timer type
@@ -130,14 +127,13 @@ public:
      *
      * @param socket An rvalue reference to the socket
      * @param router A const reference to the Router
-     * @param on_action A list of callbacks 
+     * @param on_action A list of callbacks
      * @returns context_type
      */
-    template<
-        class ...OnAction
-    >
+    template <
+        class... OnAction>
     static context_type
-    recv(socket_type &&socket, const router_type &router, OnAction &&...on_action);
+    recv(socket_type&& socket, const router_type& router, OnAction&&... on_action);
 
     /// The method for receiving data whithin the given timeout
     /**
@@ -150,43 +146,39 @@ public:
      * @param on_action A list of callbacks
      * @returns context_type
      */
-    template<
+    template <
         class TimeDuration,
-        class ...OnAction
-    >
+        class... OnAction>
     static context_type
-    recv(socket_type &&socket, const router_type &router, TimeDuration &&duration, OnAction &&...on_action);
+    recv(socket_type&& socket, const router_type& router, TimeDuration&& duration, OnAction&&... on_action);
 
     /// The method for sending data
     /**
      * The method does send data by the using the corresponding socket
-     * 
+     *
      * @param socket An rvalue reference to the socket
      * @param request The request message to be sent
      * @param router A const reference to the router
      * @param on_action A list of callbacks
      * @returns context_type
      */
-    template<
+    template <
         class Request,
-        class ...OnAction
-    >
+        class... OnAction>
     static context_type
-    send(socket_type &&socket, Request &&request, const router_type &router, OnAction &&...on_action);
+    send(socket_type&& socket, Request&& request, const router_type& router, OnAction&&... on_action);
 
 private:
-    template<
-        class ...OnAction
-    >
-    static context_type init_context(socket_type &&socket, const router_type &router, OnAction &&...on_action);
+    template <
+        class... OnAction>
+    static context_type init_context(socket_type&& socket, const router_type& router, OnAction&&... on_action);
 
-    class impl: public base::strand_stream, 
-        public std::enable_shared_from_this<impl>
-    {
-        template<class>
+    class impl : public base::strand_stream,
+                 public std::enable_shared_from_this<impl> {
+        template <class>
         friend class context;
 
-        template<class>
+        template <class>
         friend class base::conn_queue;
 
         using request_parser_type = boost::beast::http::request_parser<body_type>;
@@ -195,17 +187,17 @@ private:
     public:
         using self_type = impl;
 
-        using parser_type = std::conditional_t<IsRequest, 
-              request_parser_type, response_parser_type>;
+        using parser_type = std::conditional_t<IsRequest,
+            request_parser_type, response_parser_type>;
 
-        explicit impl(socket_type &&socket, buffer_type &&buffer, 
-            const router_type &router, const on_error_type &on_error);
+        explicit impl(socket_type&& socket, buffer_type&& buffer,
+            const router_type& router, const on_error_type& on_error);
 
-        self_type &recv();
-        self_type &recv(timer_duration_type duration);
+        self_type& recv();
+        self_type& recv(timer_duration_type duration);
 
-        template<class Message>
-        self_type &send(Message &&message, timer_duration_type duration);
+        template <class Message>
+        self_type& send(Message&& message, timer_duration_type duration);
 
     private:
         void do_timer(timer_duration_type duraion);
@@ -216,11 +208,11 @@ private:
 
         void do_eof(shutdown_type type);
 
-        template<class Message>
-        void do_process_request(Message &&message);
+        template <class Message>
+        void do_process_request(Message&& message);
 
-        template<bool IsMessageRequest, class MessageBody, class Fields>
-        void do_write(boost::beast::http::message<IsMessageRequest, MessageBody, Fields> &message);
+        template <bool IsMessageRequest, class MessageBody, class Fields>
+        void do_write(boost::beast::http::message<IsMessageRequest, MessageBody, Fields>& message);
         void on_write(boost::system::error_code ec, std::size_t bytes_transferred, bool close);
 
     private:
@@ -237,25 +229,25 @@ private:
 public:
     /// The Context class
     /**
-     * The main class which is passed as a parameter to the user 
+     * The main class which is passed as a parameter to the user
      * and used for the interaction whithin the connection.
      */
-    template<class Impl>
-    class context
-    {
+    template <class Impl>
+    class context {
         static_assert(
             std::is_base_of_v<
                 boost::asio::strand<boost::asio::system_timer::executor_type>, Impl>,
             "context requirements are not met");
+
     public:
         /// Constructor
-        context(Impl &impl);
+        context(Impl& impl);
 
         /// The method receives a data send by the socket
         /**
          * @returns void
          */
-        void 
+        void
         recv();
 
         /// The method receives a data send by the socket whithin the timeout
@@ -263,22 +255,22 @@ public:
          * @param duration A time duration used by the timer
          * @returns void
          */
-        template<class TimeDuration>
+        template <class TimeDuration>
 #if ROUTER_DOXYGEN
         void
 #else
         typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
 #endif
-        recv(TimeDuration &&duration);
+        recv(TimeDuration&& duration);
 
         /// The overloaded method does send data back to client
         /**
          * @param message The messge type associated with the Body
          * @returns void
          */
-        template<class Message>
-        void 
-        send(Message &&message) const;
+        template <class Message>
+        void
+        send(Message&& message) const;
 
         /// The overloaded method does send data back to client within the timeout
         /**
@@ -286,9 +278,9 @@ public:
          * @param duration A time duration used by the timer
          * @returns void
          */
-        template<class Message, class TimeDuration>
-        void 
-        send(Message &&message, TimeDuration &&duration) const;
+        template <class Message, class TimeDuration>
+        void
+        send(Message&& message, TimeDuration&& duration) const;
 
         /// Obtains the state of the connection
         /**
@@ -296,21 +288,21 @@ public:
          */
         bool
         is_open() const;
-        
+
         /// Obtains the user data; lvalue reference context
         /**
          * @returns Type reference
          */
-        template<class Type>
-        Type &
+        template <class Type>
+        Type&
         get_user_data() &;
 
         /// Obtains the user data; rvalue reference context
         /**
          * @returns Type rvalue eference
          */
-        template<class Type>
-        Type &&
+        template <class Type>
+        Type&&
         get_user_data() &&;
 
         /// Sets user data
@@ -318,14 +310,14 @@ public:
          * @param data A data type to store
          * @returns void
          */
-        template<class Type>
+        template <class Type>
         void
         set_user_data(Type data);
 
     protected:
-        template<class Message, class TimeDuration>
-        void do_send(Message &&message, TimeDuration &&duration) const;
-            
+        template <class Message, class TimeDuration>
+        void do_send(Message&& message, TimeDuration&& duration) const;
+
     private:
         std::shared_ptr<Impl> m_impl;
         std::any m_user_data;

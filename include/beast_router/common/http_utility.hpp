@@ -1,24 +1,24 @@
 #pragma once
 
 #include <map>
-#include <tuple>
 #include <string_view>
+#include <tuple>
 
+#include <boost/beast/http/empty_body.hpp>
+#include <boost/beast/http/file_body.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/string_body.hpp>
-#include <boost/beast/http/file_body.hpp>
-#include <boost/beast/http/empty_body.hpp>
 
 namespace beast_router {
 
 namespace http = boost::beast::http;
 
 /// Http response associated with the response body
-template<class Body>
+template <class Body>
 using beast_http_response = http::response<Body>;
 
 /// Http request associated with the request body
-template<class Body>
+template <class Body>
 using beast_http_request = http::request<Body>;
 
 /// String response
@@ -35,56 +35,53 @@ using http_empty_request = beast_http_request<http::empty_body>;
 
 namespace details {
 
-template<bool IsRequest, class Body>
-struct message_creator
-{
-    using return_type = std::conditional_t<IsRequest, 
-        http::request<Body>,
-        http::response<Body>>;
+    template <bool IsRequest, class Body>
+    struct message_creator {
+        using return_type = std::conditional_t<IsRequest,
+            http::request<Body>,
+            http::response<Body>>;
 
-    template<class ...Args>
-    static return_type
-    create(http::status code, unsigned version, Args &&...args)
-    {
-        return return_type{
-            std::piecewise_construct,
-            std::forward_as_tuple(std::forward<Args>(args)...),
-            std::forward_as_tuple(code, version)
-        };
-    }
+        template <class... Args>
+        static return_type
+        create(http::status code, unsigned version, Args&&... args)
+        {
+            return return_type {
+                std::piecewise_construct,
+                std::forward_as_tuple(std::forward<Args>(args)...),
+                std::forward_as_tuple(code, version)
+            };
+        }
 
-    static return_type
-    create(boost::beast::http::verb verb, unsigned version, std::string_view target)
-    {
-        return return_type{verb, target, version};
-    }
-};
+        static return_type
+        create(boost::beast::http::verb verb, unsigned version, std::string_view target)
+        {
+            return return_type { verb, target, version };
+        }
+    };
 
-template<bool IsRequest>
-struct message_creator<IsRequest, http::empty_body>
-{
-    using return_type = std::conditional_t<IsRequest, 
-        http::request<http::empty_body>,
-        http::response<http::empty_body>>;
+    template <bool IsRequest>
+    struct message_creator<IsRequest, http::empty_body> {
+        using return_type = std::conditional_t<IsRequest,
+            http::request<http::empty_body>,
+            http::response<http::empty_body>>;
 
-    static return_type
-    create(http::status code, unsigned version)
-    {
-        return return_type{code, version};
-    }
+        static return_type
+        create(http::status code, unsigned version)
+        {
+            return return_type { code, version };
+        }
 
-    static return_type
-    create(boost::beast::http::verb verb, unsigned version, std::string_view target)
-    {
-        return return_type{verb, target, version};
-    }
-};
+        static return_type
+        create(boost::beast::http::verb verb, unsigned version, std::string_view target)
+        {
+            return return_type { verb, target, version };
+        }
+    };
 
 } // namespace details
 
 /// The common struct to work with the mime types
-struct mime_type
-{
+struct mime_type {
     /// The self type
     using self_type = mime_type;
 
@@ -113,16 +110,14 @@ private:
  * @param args A tuple forwarded as a parameter pack to the `Fields` constructor
  * @returns http response associated with the body
  */
-template<
-    class Body, 
+template <
+    class Body,
     class Version,
-    class ...Args,
+    class... Args,
     std::enable_if_t<
-        std::is_convertible_v<Version, unsigned>, bool
-    > = true
->
+        std::is_convertible_v<Version, unsigned>, bool> = true>
 static typename details::message_creator<false, Body>::return_type
-create_response(http::status code, Version version, Args &&...args);
+create_response(http::status code, Version version, Args&&... args);
 
 /// Creates a request associated with the Body type
 /**
@@ -132,16 +127,14 @@ create_response(http::status code, Version version, Args &&...args);
  * @param args A tuple forwarded as a parameter pack to the `Fields` constructor
  * @returns http request associated with the body
  */
-template<
+template <
     class Body,
     class Version,
-    class ...Args,
+    class... Args,
     std::enable_if_t<
-        std::is_convertible_v<Version, unsigned>, bool
-    > = true
->
+        std::is_convertible_v<Version, unsigned>, bool> = true>
 static typename details::message_creator<true, Body>::return_type
-create_request(boost::beast::http::verb verb, Version version, std::string_view target, Args &&...args);
+create_request(boost::beast::http::verb verb, Version version, std::string_view target, Args&&... args);
 
 /// Creates redirection response within the `Location`
 /**
@@ -149,7 +142,7 @@ create_request(boost::beast::http::verb verb, Version version, std::string_view 
  * @param location Redirection location
  * @returns http_empty_response with the HTTP code - moved permanently
  */
-template<class Version>
+template <class Version>
 static http_empty_response
 make_moved_response(Version version, std::string_view location);
 
@@ -161,9 +154,9 @@ make_moved_response(Version version, std::string_view location);
  * @param content A mime type of the data
  * @returns http_string_response
  */
-template<class Version>
+template <class Version>
 static http_string_response
-make_string_response(http::status code, Version version, 
+make_string_response(http::status code, Version version,
     std::string_view data, std::string_view content = "text/html");
 
 /// Creates file response by the given file name
@@ -176,9 +169,9 @@ make_string_response(http::status code, Version version,
  * If a file is not found or cannot be read then `not_found` is set;
  * otherwise the `ok` status code is sent
  */
-template<class Version>
+template <class Version>
 static http_file_response
-make_file_response(Version version, const std::string &file_name);
+make_file_response(Version version, const std::string& file_name);
 
 /// Creates empty request type
 /**
@@ -187,7 +180,7 @@ make_file_response(Version version, const std::string &file_name);
  * @param target Target string given as a resource request
  * @returns http_empty_response
  */
-template<class Version>
+template <class Version>
 static http_empty_request
 make_empty_request(boost::beast::http::verb verb, Version version, std::string_view target);
 

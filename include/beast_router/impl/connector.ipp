@@ -1,31 +1,31 @@
 #pragma once
 
-#define CONNECTOR_TEMPLATE_DECLARE       \
-    template<                            \
-    class Protocol,                      \
-    class Resolver,                      \
-    class Socket,                        \
-    template<typename> class Endpoint>
+#define CONNECTOR_TEMPLATE_DECLARE \
+    template <                     \
+        class Protocol,            \
+        class Resolver,            \
+        class Socket,              \
+        template <typename> class Endpoint>
 
 namespace beast_router {
 
 CONNECTOR_TEMPLATE_DECLARE
-connector<CONNECTOR_TEMPLATE_ATTRIBUTES>::connector(boost::asio::io_context &ctx, on_connect_type &&on_connect)
-    : base::strand_stream{ctx.get_executor()}
-    , m_resolver{ctx}
-    , m_on_connect{std::move(on_connect)}
-    , m_on_error{nullptr}
-    , m_connection{socket_type{ctx}, static_cast<base::strand_stream &>(*this)}
+connector<CONNECTOR_TEMPLATE_ATTRIBUTES>::connector(boost::asio::io_context& ctx, on_connect_type&& on_connect)
+    : base::strand_stream { ctx.get_executor() }
+    , m_resolver { ctx }
+    , m_on_connect { std::move(on_connect) }
+    , m_on_error { nullptr }
+    , m_connection { socket_type { ctx }, static_cast<base::strand_stream&>(*this) }
 {
 }
 
 CONNECTOR_TEMPLATE_DECLARE
-connector<CONNECTOR_TEMPLATE_ATTRIBUTES>::connector(boost::asio::io_context &ctx, on_connect_type &&on_connect, on_error_type &&on_error)
-    : base::strand_stream{ctx.get_executor()}
-    , m_resolver{ctx}
-    , m_on_connect{std::move(on_connect)}
-    , m_on_error{std::move(on_error)}
-    , m_connection{socket_type{ctx}, static_cast<base::strand_stream &>(*this)}
+connector<CONNECTOR_TEMPLATE_ATTRIBUTES>::connector(boost::asio::io_context& ctx, on_connect_type&& on_connect, on_error_type&& on_error)
+    : base::strand_stream { ctx.get_executor() }
+    , m_resolver { ctx }
+    , m_on_connect { std::move(on_connect) }
+    , m_on_error { std::move(on_error) }
+    , m_connection { socket_type { ctx }, static_cast<base::strand_stream&>(*this) }
 {
 }
 
@@ -35,8 +35,7 @@ void connector<CONNECTOR_TEMPLATE_ATTRIBUTES>::do_resolve(std::string_view addre
     m_resolver.async_resolve(address, port,
         boost::beast::bind_front_handler(
             &self_type::on_resolve,
-            this->shared_from_this()
-        ));
+            this->shared_from_this()));
 }
 
 CONNECTOR_TEMPLATE_DECLARE
@@ -49,16 +48,13 @@ void connector<CONNECTOR_TEMPLATE_ATTRIBUTES>::on_resolve(boost::beast::error_co
         return;
     }
 
-    m_connection.async_connect(std::move(results), 
+    m_connection.async_connect(std::move(results),
         std::bind(
             static_cast<
-                void (self_type::*)(boost::beast::error_code, typename results_type::endpoint_type)
-            >(&self_type::on_connect),
+                void (self_type::*)(boost::beast::error_code, typename results_type::endpoint_type)>(&self_type::on_connect),
             this->shared_from_this(),
             std::placeholders::_1,
-            std::placeholders::_2
-        )
-    );
+            std::placeholders::_2));
 }
 
 CONNECTOR_TEMPLATE_DECLARE

@@ -11,10 +11,9 @@ namespace beast_router {
 /**
  * @note The class is neither copyable nor assignment
  */
-template<class Stream, class CompletionExecutor>
-class connection: public base::connection<
-    connection<Stream, CompletionExecutor>, CompletionExecutor>
-{
+template <class Stream, class CompletionExecutor>
+class connection : public base::connection<
+                       connection<Stream, CompletionExecutor>, CompletionExecutor> {
 public:
     /// The self type
     using self_type = connection<CONNECTION_TEMPLATE_ATTRIBUTES>;
@@ -26,7 +25,7 @@ public:
     using shutdown_type = typename stream_type::shutdown_type;
 
     /// Constructor
-    explicit connection(Stream &&stream, const CompletionExecutor &executor);
+    explicit connection(Stream&& stream, const CompletionExecutor& executor);
 
     /// Destructor
     ~connection() override;
@@ -63,7 +62,7 @@ public:
     /**
      * @returns stream_type
      */
-    ROUTER_DECL stream_type &stream();
+    ROUTER_DECL stream_type& stream();
 
 private:
     stream_type m_stream;

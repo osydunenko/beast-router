@@ -1,7 +1,7 @@
 #pragma once
 
-#include <type_traits>
 #include <boost/asio/bind_executor.hpp>
+#include <type_traits>
 
 #define TIMER_TEMPLATE_ATTRIBUTES \
     CompletionExecutor, Timer
@@ -14,15 +14,14 @@ using namespace std::chrono_literals;
 /**
  * @note The class is not copyable nor assignment
  */
-template<
-    class CompletionExecutor, 
-    class Timer
->
-class timer
-{
+template <
+    class CompletionExecutor,
+    class Timer>
+class timer {
     static_assert(
         boost::asio::is_executor<CompletionExecutor>::value,
         "Timer requirements are not met");
+
 public:
     /// The self type
     using self_type = timer<TIMER_TEMPLATE_ATTRIBUTES>;
@@ -40,21 +39,23 @@ public:
     using duration_type = typename clock_type::duration;
 
     /// Constructor
-    explicit timer(const CompletionExecutor &executor);
+    explicit timer(const CompletionExecutor& executor);
 
     /// Constructor (disallowed)
-    timer(const self_type &) = delete;
+    timer(const self_type&) = delete;
 
     /// Assignment (disallowed)
-    self_type &
-    operator=(const self_type &) = delete;
+    self_type&
+    operator=(const self_type&)
+        = delete;
 
     /// Constructor
-    timer(self_type &&) = default;
+    timer(self_type&&) = default;
 
     /// Assignment
-    self_type &
-    operator=(self_type &&) = default;
+    self_type&
+    operator=(self_type&&)
+        = default;
 
     /// Sets an expiration time point
     /**
@@ -62,7 +63,7 @@ public:
      * @returns The number of asynchronous operations that were cancelled
      */
     std::size_t
-    expires_from_now(const duration_type &expire_time);
+    expires_from_now(const duration_type& expire_time);
 
     /// Returns the expire time point
     /**
@@ -77,18 +78,18 @@ public:
      */
     boost::system::error_code
     cancel();
- 
+
     /// Asynchronous waiter and timer activator
-    /** 
+    /**
      * @param func A universal reference to the callback
      * @return void
      */
-    template<class Function>
-    void 
-    async_wait(Function &&func);
+    template <class Function>
+    void
+    async_wait(Function&& func);
 
 private:
-    const CompletionExecutor &m_executor;
+    const CompletionExecutor& m_executor;
     asio_timer_type m_timer;
 };
 

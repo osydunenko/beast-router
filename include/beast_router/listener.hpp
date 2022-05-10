@@ -41,15 +41,12 @@ namespace beast_router {
  *  http_listener::launch(g_ioc, {address, port}, on_accept, on_error);
  * ```
  */
-template<
+template <
     class Protocol = boost::asio::ip::tcp,
     class Acceptor = boost::asio::basic_socket_acceptor<Protocol>,
     class Socket = boost::asio::basic_stream_socket<Protocol>,
-    template<typename> class Endpoint = boost::asio::ip::basic_endpoint
-> 
-class listener: public base::strand_stream
-    , public std::enable_shared_from_this<listener<LISTENER_TEMPLATE_ATTRIBUTES>>
-{
+    template <typename> class Endpoint = boost::asio::ip::basic_endpoint>
+class listener : public base::strand_stream, public std::enable_shared_from_this<listener<LISTENER_TEMPLATE_ATTRIBUTES>> {
 public:
     /// The self type
     using self_type = listener<LISTENER_TEMPLATE_ATTRIBUTES>;
@@ -73,10 +70,10 @@ public:
     using on_error_type = std::function<void(boost::system::error_code, std::string_view)>;
 
     /// Constructor
-    explicit listener(boost::asio::io_context &ctx, on_accept_type &&on_accept);
+    explicit listener(boost::asio::io_context& ctx, on_accept_type&& on_accept);
 
     /// Constructor
-    explicit listener(boost::asio::io_context &ctx, on_accept_type &&on_accept, on_error_type &&on_error);
+    explicit listener(boost::asio::io_context& ctx, on_accept_type&& on_accept, on_error_type&& on_error);
 
     /// The factory method which creates `self_type` and starts listening and accepts new connections
     /**
@@ -87,16 +84,15 @@ public:
      * @param on_action A list of actions suitable for the self construction i.e. `on_accept`, `on_error` signatures
      * @returns void
      */
-    template<
-        class ...OnAction,
+    template <
+        class... OnAction,
 #if not ROUTER_DOXYGEN
         std::enable_if_t<
-            utility::is_class_creatable_v<self_type, boost::asio::io_context &, OnAction...>, bool
-        > = true
+            utility::is_class_creatable_v<self_type, boost::asio::io_context&, OnAction...>, bool> = true
 #endif
-    >
+        >
     static void
-    launch(boost::asio::io_context &ctx, const endpoint_type &endpoint, OnAction &&...on_action)
+    launch(boost::asio::io_context& ctx, const endpoint_type& endpoint, OnAction&&... on_action)
     {
         std::make_shared<self_type>(ctx, std::forward<OnAction>(on_action)...)->loop(endpoint);
     }
@@ -108,7 +104,7 @@ protected:
      * @returns void
      */
     void
-    loop(const endpoint_type &endpoint);
+    loop(const endpoint_type& endpoint);
 
     /// An async accept method. Passes on_accept() as an internal callback which triggers on new connection
     void
@@ -120,11 +116,11 @@ protected:
 
     /// Calls the given user specified on_accept callback
     void
-    on_spawn_connect(boost::system::error_code ec, socket_type &socket);
+    on_spawn_connect(boost::system::error_code ec, socket_type& socket);
 
 private:
     acceptor_type m_acceptor;
-    boost::asio::io_context &m_io_ctx;
+    boost::asio::io_context& m_io_ctx;
     on_accept_type m_on_accept;
     on_error_type m_on_error;
     endpoint_type m_endpoint;
@@ -136,4 +132,3 @@ using http_listener = listener<>;
 } // namespace beast_router
 
 #include "impl/listener.ipp"
-

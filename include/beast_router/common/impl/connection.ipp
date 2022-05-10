@@ -2,16 +2,16 @@
 
 #define CONNECTION_TEMPLATE_DECLARE \
     template <                      \
-    class Stream,                   \
-    class CompletionExecutor >
+        class Stream,               \
+        class CompletionExecutor>
 
 namespace beast_router {
 
 CONNECTION_TEMPLATE_DECLARE
-connection<CONNECTION_TEMPLATE_ATTRIBUTES>::connection(Stream &&stream, const CompletionExecutor &executor)
+connection<CONNECTION_TEMPLATE_ATTRIBUTES>::connection(Stream&& stream, const CompletionExecutor& executor)
     : base::connection<
-        connection<Stream, CompletionExecutor>, CompletionExecutor>{executor}
-    , m_stream{std::move(stream)}
+        connection<Stream, CompletionExecutor>, CompletionExecutor> { executor }
+    , m_stream { std::move(stream) }
 {
 }
 
@@ -26,7 +26,7 @@ connection<CONNECTION_TEMPLATE_ATTRIBUTES>::~connection()
 CONNECTION_TEMPLATE_DECLARE
 ROUTER_DECL boost::beast::error_code connection<CONNECTION_TEMPLATE_ATTRIBUTES>::shutdown(shutdown_type type)
 {
-    auto ec = boost::system::error_code{};
+    auto ec = boost::system::error_code {};
     m_stream.shutdown(type, ec);
 
     return ec;
@@ -35,7 +35,7 @@ ROUTER_DECL boost::beast::error_code connection<CONNECTION_TEMPLATE_ATTRIBUTES>:
 CONNECTION_TEMPLATE_DECLARE
 ROUTER_DECL boost::beast::error_code connection<CONNECTION_TEMPLATE_ATTRIBUTES>::close()
 {
-    auto ec = boost::system::error_code{};
+    auto ec = boost::system::error_code {};
     m_stream.close(ec);
 
     return ec;
@@ -55,7 +55,7 @@ ROUTER_DECL typename connection<CONNECTION_TEMPLATE_ATTRIBUTES>::stream_type con
 }
 
 CONNECTION_TEMPLATE_DECLARE
-ROUTER_DECL typename connection<CONNECTION_TEMPLATE_ATTRIBUTES>::stream_type &connection<CONNECTION_TEMPLATE_ATTRIBUTES>::stream()
+ROUTER_DECL typename connection<CONNECTION_TEMPLATE_ATTRIBUTES>::stream_type& connection<CONNECTION_TEMPLATE_ATTRIBUTES>::stream()
 {
     return m_stream;
 }

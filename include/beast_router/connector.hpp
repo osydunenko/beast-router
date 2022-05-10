@@ -1,16 +1,16 @@
 #pragma once
 
+#include <functional>
 #include <memory>
 #include <string_view>
-#include <functional>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/system/error_code.hpp>
 
 #include "base/config.hpp"
 #include "base/strand_stream.hpp"
-#include "common/utility.hpp"
 #include "common/connection.hpp"
+#include "common/utility.hpp"
 
 #define CONNECTOR_TEMPLATE_ATTRIBUTES \
     Protocol, Resolver, Socket, Endpoint
@@ -22,11 +22,8 @@ template <
     class Protocol = boost::asio::ip::tcp,
     class Resolver = typename Protocol::resolver,
     class Socket = boost::asio::basic_stream_socket<Protocol>,
-    template<typename> class Endpoint = boost::asio::ip::basic_endpoint
->
-class connector: public base::strand_stream
-    , public std::enable_shared_from_this<connector<CONNECTOR_TEMPLATE_ATTRIBUTES>>
-{
+    template <typename> class Endpoint = boost::asio::ip::basic_endpoint>
+class connector : public base::strand_stream, public std::enable_shared_from_this<connector<CONNECTOR_TEMPLATE_ATTRIBUTES>> {
 public:
     /// The self type
     using self_type = connector<CONNECTOR_TEMPLATE_ATTRIBUTES>;
@@ -53,10 +50,10 @@ public:
     using results_type = typename resolver_type::results_type;
 
     /// Constructor
-    explicit connector(boost::asio::io_context &ctx, on_connect_type &&on_connect);
+    explicit connector(boost::asio::io_context& ctx, on_connect_type&& on_connect);
 
     /// Constructor
-    explicit connector(boost::asio::io_context &ctx, on_connect_type &&on_connect, on_error_type &&on_error);
+    explicit connector(boost::asio::io_context& ctx, on_connect_type&& on_connect, on_error_type&& on_error);
 
     /// The connection factory method
     /**
@@ -66,16 +63,15 @@ public:
      * @param on_action A pack of callbacks suitable for the `this` object creation
      * @returns void
      */
-    template<
-        class ...OnAction,
+    template <
+        class... OnAction,
 #if not ROUTER_DOXYGEN
         std::enable_if_t<
-            utility::is_class_creatable_v<self_type, boost::asio::io_context &, OnAction...>, bool
-        > = true
+            utility::is_class_creatable_v<self_type, boost::asio::io_context&, OnAction...>, bool> = true
 #endif
-    >
+        >
     static void
-    connect(boost::asio::io_context &ctx, std::string_view address, std::string_view port, OnAction &&...on_action)
+    connect(boost::asio::io_context& ctx, std::string_view address, std::string_view port, OnAction&&... on_action)
     {
         std::make_shared<self_type>(ctx, std::forward<OnAction>(on_action)...)->do_resolve(address, port);
     }
@@ -107,7 +103,7 @@ protected:
 
 private:
     using connection_type = connection<socket_type, base::strand_stream::asio_type>;
-    
+
     resolver_type m_resolver;
     on_connect_type m_on_connect;
     on_error_type m_on_error;
