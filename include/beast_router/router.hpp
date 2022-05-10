@@ -1,7 +1,7 @@
 #pragma once
 
 #include <regex>
-
+#include <unordered_map>
 #include "base/config.hpp"
 #include "base/lockable.hpp"
 #include "common/utility.hpp"

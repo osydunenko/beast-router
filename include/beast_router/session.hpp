@@ -34,13 +34,9 @@ namespace beast_router {
  * within the following attributes:
  * 
  * @li IsRequest -- Defines belonging to the mode of a session a.k.a. server versus client
- * 
  * @li Body -- configures the body type used for the incoming messages
- * 
  * @li Buffer -- A flat buffer which uses the default allocator
- * 
  * @li Protocol -- Defines a protocl used for
- * 
  * @li Socket -- Defines a sicket type
  * 
  */

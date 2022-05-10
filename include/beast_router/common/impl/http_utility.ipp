@@ -26,7 +26,7 @@ template<
     class Body, 
     class Version,
     class ...Args,
-    std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool> = true>
+    std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool>>
 static typename details::message_creator<false, Body>::return_type
 create_response(http::status code, Version version, Args &&...args)
 {
@@ -38,7 +38,7 @@ template<
     class Body, 
     class Version,
     class ...Args,
-    std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool> = true>
+    std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool>>
 static typename details::message_creator<true, Body>::return_type
 create_request(boost::beast::http::verb verb, Version version, std::string_view target, Args &&...args)
 {

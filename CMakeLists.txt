@@ -5,7 +5,7 @@ project(beast_router)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Options decl.
@@ -13,18 +13,44 @@ option(BUILD_EXAMPLES "Build examples" OFF)
 option(ROUTER_DOXYGEN "Generate Doxygen" OFF)
 option(BUILD_TESTS "Build tests" OFF)
 option(LINK_SSL "Build with openssl" OFF)
+option(LINK_ASAN "Build with asan" OFF)
 
 add_library(${PROJECT_NAME} INTERFACE)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-target_compile_features(${PROJECT_NAME} INTERFACE cxx_std_17)
-
 # Add compile options
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    add_compile_options(-fdiagnostics-color=always -Wall -Wextra -pedantic -Werror)
-else()
-    message(FATAL_ERROR "The compiler \"${CMAKE_CXX_COMPILER_ID}\" is not supported")
-endif()
+add_library(common_options INTERFACE)
+add_library(BRouter::common_options ALIAS common_options)
+target_compile_options(
+    common_options
+    INTERFACE
+        -Werror
+        -Wextra
+        -Wpedantic
+        -Wunused-variable
+        $<$<BOOL:${LINK_ASAN}>:
+            -fsanitize=address 
+            -fno-optimize-sibling-calls
+            -fsanitize-address-use-after-scope
+            -fno-omit-frame-pointer>
+        $<$<CXX_COMPILER_ID:Clang>:-stdlib=libc++>
+)
+
+add_library(common_libraries INTERFACE)
+add_library(BRouter::common_libraries ALIAS common_libraries)
+target_link_libraries(
+    common_libraries
+    INTERFACE
+        $<$<BOOL:${LINK_ASAN}>:-fsanitize=address>
+)
+
+add_library(common_definitions INTERFACE)
+add_library(BRouter::common_definitions ALIAS common_definitions)
+target_compile_definitions(
+    common_definitions
+    INTERFACE
+        BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
+)
 
 # Check prereqs
 find_package(Boost REQUIRED COMPONENTS system thread)
@@ -44,6 +70,9 @@ target_link_libraries(
     INTERFACE
         Boost::system
         Boost::thread
+        BRouter::common_options
+        BRouter::common_libraries
+        BRouter::common_definitions
         $<$<BOOL:${LINK_SSL}>:OpenSSL::Crypto OpenSSL::SSL>
 )
 
@@ -95,4 +124,5 @@ message(STATUS "CMAKE_VERSION:...............${CMAKE_VERSION}")
 message(STATUS "CMAKE_C_COMPILER:............${CMAKE_C_COMPILER}")
 message(STATUS "CMAKE_CXX_COMPILER:..........${CMAKE_CXX_COMPILER}")
 message(STATUS "DOXYGEN_EXECUTABLE:..........${DOXYGEN_EXECUTABLE}")    
+message(STATUS "BOOST VERSION:...............${Boost_VERSION_STRING}")    
 message(STATUS "-------------------------------------------------------")
