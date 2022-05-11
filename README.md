@@ -24,6 +24,7 @@ The library is designed for:
 - **Symmetry:** Role-agnostic, supports building clients (in progress), servers, or both
 
 <div id="dependencies" />
+
 ## Dependencies
 - Boost Libraries >= 1.74.0 as sys. dependency
 	- Boost.System
@@ -34,6 +35,7 @@ The library is designed for:
 - Doxygen >= 1.9.2
 
 <div id="documentation" />
+
 ## Documentation
 
 For the `api` doc generation you need to execute a target by using your generator passed to cmake.
@@ -49,6 +51,7 @@ open doc/html/index.html
 ```
 
 <div id="building" />
+
 ## Building
 `beast-router` is a header-only. So, to use it just add the necessary `#include` line to your source code, such as the following:
 
@@ -69,11 +72,13 @@ target_link_libraries(
 ```
 
 <div id="usage" />
+
 ## Usage
 
 The examples which you can build and run are in the `example` directory -- [Link](https://github.com/osydunenko/beast-router/tree/main/examples)
 
 <div id="limitations" />
+
 ## Limitations
 - WebSocket support
 - TLS/Secure sockets
