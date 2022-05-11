@@ -1,13 +1,12 @@
 #pragma once
 
-#include <map>
-#include <string_view>
-#include <tuple>
-
 #include <boost/beast/http/empty_body.hpp>
 #include <boost/beast/http/file_body.hpp>
 #include <boost/beast/http/message.hpp>
 #include <boost/beast/http/string_body.hpp>
+#include <map>
+#include <string_view>
+#include <tuple>
 
 namespace beast_router {
 
@@ -35,72 +34,63 @@ using http_empty_request = beast_http_request<http::empty_body>;
 
 namespace details {
 
-    template <bool IsRequest, class Body>
-    struct message_creator {
-        using return_type = std::conditional_t<IsRequest,
-            http::request<Body>,
-            http::response<Body>>;
+template <bool IsRequest, class Body>
+struct message_creator {
+  using return_type =
+      std::conditional_t<IsRequest, http::request<Body>, http::response<Body>>;
 
-        template <class... Args>
-        static return_type
-        create(http::status code, unsigned version, Args&&... args)
-        {
-            return return_type {
-                std::piecewise_construct,
-                std::forward_as_tuple(std::forward<Args>(args)...),
-                std::forward_as_tuple(code, version)
-            };
-        }
+  template <class... Args>
+  static return_type create(http::status code, unsigned version,
+                            Args &&...args) {
+    return return_type{std::piecewise_construct,
+                       std::forward_as_tuple(std::forward<Args>(args)...),
+                       std::forward_as_tuple(code, version)};
+  }
 
-        static return_type
-        create(boost::beast::http::verb verb, unsigned version, std::string_view target)
-        {
-            return return_type { verb, target, version };
-        }
-    };
+  static return_type create(boost::beast::http::verb verb, unsigned version,
+                            std::string_view target) {
+    return return_type{verb, target, version};
+  }
+};
 
-    template <bool IsRequest>
-    struct message_creator<IsRequest, http::empty_body> {
-        using return_type = std::conditional_t<IsRequest,
-            http::request<http::empty_body>,
-            http::response<http::empty_body>>;
+template <bool IsRequest>
+struct message_creator<IsRequest, http::empty_body> {
+  using return_type =
+      std::conditional_t<IsRequest, http::request<http::empty_body>,
+                         http::response<http::empty_body>>;
 
-        static return_type
-        create(http::status code, unsigned version)
-        {
-            return return_type { code, version };
-        }
+  static return_type create(http::status code, unsigned version) {
+    return return_type{code, version};
+  }
 
-        static return_type
-        create(boost::beast::http::verb verb, unsigned version, std::string_view target)
-        {
-            return return_type { verb, target, version };
-        }
-    };
+  static return_type create(boost::beast::http::verb verb, unsigned version,
+                            std::string_view target) {
+    return return_type{verb, target, version};
+  }
+};
 
-} // namespace details
+}  // namespace details
 
 /// The common struct to work with the mime types
 struct mime_type {
-    /// The self type
-    using self_type = mime_type;
+  /// The self type
+  using self_type = mime_type;
 
-    /// Map container type holds the mime types
-    using container_type = std::map<std::string_view, std::string_view>;
+  /// Map container type holds the mime types
+  using container_type = std::map<std::string_view, std::string_view>;
 
-    /// The defalt mime type
-    static constexpr std::string_view default_mime = "application/text";
+  /// The defalt mime type
+  static constexpr std::string_view default_mime = "application/text";
 
-    /// Returns a mime type by the given extension
-    /**
-     * @param ext An extension for a type to be returned
-     * @returns mime type
-     */
-    static std::string_view
-    get(std::string_view ext);
+  /// Returns a mime type by the given extension
+  /**
+   * @param ext An extension for a type to be returned
+   * @returns mime type
+   */
+  static std::string_view get(std::string_view ext);
 
-private:
-    static const container_type mime_types;
+ private:
+  static const container_type mime_types;
 };
 
 /// Creates a response associated with the Body type
@@ -111,13 +101,10 @@ private:
  * @returns http response associated with the body
  */
 template <
-    class Body,
-    class Version,
-    class... Args,
-    std::enable_if_t<
-        std::is_convertible_v<Version, unsigned>, bool> = true>
+    class Body, class Version, class... Args,
+    std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool> = true>
 static typename details::message_creator<false, Body>::return_type
-create_response(http::status code, Version version, Args&&... args);
+create_response(http::status code, Version version, Args &&...args);
 
 /// Creates a request associated with the Body type
 /**
@@ -128,13 +115,11 @@ create_response(http::status code, Version version, Args&&... args);
  * @returns http request associated with the body
  */
 template <
-    class Body,
-    class Version,
-    class... Args,
-    std::enable_if_t<
-        std::is_convertible_v<Version, unsigned>, bool> = true>
+    class Body, class Version, class... Args,
+    std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool> = true>
 static typename details::message_creator<true, Body>::return_type
-create_request(boost::beast::http::verb verb, Version version, std::string_view target, Args&&... args);
+create_request(boost::beast::http::verb verb, Version version,
+               std::string_view target, Args &&...args);
 
 /// Creates redirection response within the `Location`
 /**
@@ -143,8 +128,8 @@ create_request(boost::beast::http::verb verb, Version version, std::string_view 
  * @returns http_empty_response with the HTTP code - moved permanently
  */
 template <class Version>
-static http_empty_response
-make_moved_response(Version version, std::string_view location);
+static http_empty_response make_moved_response(Version version,
+                                               std::string_view location);
 
 /// Creates string response by the given HTTP code and string data
 /**
@@ -155,9 +140,9 @@ make_moved_response(Version version, std::string_view location);
  * @returns http_string_response
  */
 template <class Version>
-static http_string_response
-make_string_response(http::status code, Version version,
-    std::string_view data, std::string_view content = "text/html");
+static http_string_response make_string_response(
+    http::status code, Version version, std::string_view data,
+    std::string_view content = "text/html");
 
 /// Creates file response by the given file name
 /**
@@ -170,8 +155,8 @@ make_string_response(http::status code, Version version,
  * otherwise the `ok` status code is sent
  */
 template <class Version>
-static http_file_response
-make_file_response(Version version, const std::string& file_name);
+static http_file_response make_file_response(Version version,
+                                             const std::string &file_name);
 
 /// Creates empty request type
 /**
@@ -181,9 +166,10 @@ make_file_response(Version version, const std::string& file_name);
  * @returns http_empty_response
  */
 template <class Version>
-static http_empty_request
-make_empty_request(boost::beast::http::verb verb, Version version, std::string_view target);
+static http_empty_request make_empty_request(boost::beast::http::verb verb,
+                                             Version version,
+                                             std::string_view target);
 
-} // namespace beast_router
+}  // namespace beast_router
 
 #include "impl/http_utility.ipp"

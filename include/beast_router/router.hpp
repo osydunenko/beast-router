@@ -1,12 +1,13 @@
 #pragma once
 
+#include <regex>
+#include <unordered_map>
+
 #include "base/config.hpp"
 #include "base/lockable.hpp"
 #include "base/storage.hpp"
 #include "common/http_utility.hpp"
 #include "common/utility.hpp"
-#include <regex>
-#include <unordered_map>
 
 namespace beast_router {
 
@@ -23,7 +24,8 @@ namespace beast_router {
  * @code
  * #include "beast_router.hpp"
  * ...
- * auto clb = [](const server_session::message_type &rq, server_session::context_type &ctx, const std::smatch &match) {
+ * auto clb = [](const server_session::message_type &rq,
+ * server_session::context_type &ctx, const std::smatch &match) {
  *      http_string_response rp{boost::beast::http::status::ok, rq.version()};
  *      rp.set(boost::beast::http::field::content_type, "text/html");
  *
@@ -43,260 +45,282 @@ namespace beast_router {
  */
 template <class Session>
 class router {
-public:
-    /// The self type
-    using self_type = router<Session>;
+ public:
+  /// The self type
+  using self_type = router<Session>;
 
-    /// The session type
-    using session_type = Session;
+  /// The session type
+  using session_type = Session;
 
-    /// The mutex type
-    using mutex_type = typename base::lockable::mutex_type;
+  /// The mutex type
+  using mutex_type = typename base::lockable::mutex_type;
 
-    /// The mutext pointer type
-    using mutex_pointer_type = typename base::lockable::mutex_pointer_type;
+  /// The mutext pointer type
+  using mutex_pointer_type = typename base::lockable::mutex_pointer_type;
 
-    /// The storage type hold callbacks and passed to the router
-    using storage_type = base::storage<session_type>;
+  /// The storage type hold callbacks and passed to the router
+  using storage_type = base::storage<session_type>;
 
-    /// The container type for storing storage type associated with the resource
-    using resource_map_type = std::unordered_map<std::string, storage_type>;
+  /// The container type for storing storage type associated with the resource
+  using resource_map_type = std::unordered_map<std::string, storage_type>;
 
-    /// The mothod type
-    using method_type = typename session_type::method_type;
+  /// The mothod type
+  using method_type = typename session_type::method_type;
 
-    /// The method map container type associated with th resource_map_type
-    using method_map_type = std::map<method_type, resource_map_type>;
+  /// The method map container type associated with th resource_map_type
+  using method_map_type = std::map<method_type, resource_map_type>;
 
-    /// The pointer type for the method_map_type
-    using method_map_pointer = std::shared_ptr<method_map_type>;
+  /// The pointer type for the method_map_type
+  using method_map_pointer = std::shared_ptr<method_map_type>;
 
-    /// The const pointer fpr the method_map_type
-    using method_const_map_pointer = std::shared_ptr<const method_map_type>;
+  /// The const pointer fpr the method_map_type
+  using method_const_map_pointer = std::shared_ptr<const method_map_type>;
 
-    /// Constructor
-    router();
+  /// Constructor
+  router();
 
-    /// Constructor (disallowed)
-    router(const router&) = delete;
+  /// Constructor (disallowed)
+  router(const router &) = delete;
 
-    /// Assignment (disallowed)
-    self_type& operator=(const router&) = delete;
+  /// Assignment (disallowed)
+  self_type &operator=(const router &) = delete;
 
-    /// Constructor
-    router(router&&) = delete;
+  /// Constructor
+  router(router &&) = delete;
 
-    /// Assignment
-    self_type& operator=(router&&) = default;
+  /// Assignment
+  self_type &operator=(router &&) = default;
 
-    /// Obtains a reference to the `mutex_type`
-    /**
-     * @returns mutex_type
-     */
-    mutex_type&
-    get_mutex() const;
+  /// Obtains a reference to the `mutex_type`
+  /**
+   * @returns mutex_type
+   */
+  mutex_type &get_mutex() const;
 
-    /// Obtains a pointer to the `mutext_type`
-    /**
-     * This function is used to get the mutex for further usage and controlling the critical sections
-     * along with this routing functionality
-     *
-     * @returns mutex_pointer_type
-     */
-    mutex_pointer_type
-    get_mutex_pointer() const;
+  /// Obtains a pointer to the `mutext_type`
+  /**
+   * This function is used to get the mutex for further usage and controlling
+   * the critical sections along with this routing functionality
+   *
+   * @returns mutex_pointer_type
+   */
+  mutex_pointer_type get_mutex_pointer() const;
 
-    /// The method adds handlers and links them within the given path (RegExp) for the `"GET"` method
-    /**
-     * The method associates a list of handlers and binds to the path for cases, when the respective<br>
-     * HTTP method is equal to `"GET"`.
-     * The method is instantiated under the following conditions:
-     * - `template<class ...OnRequest>` carries the list of executables routines
-     * - the methods comply and respect the signature and may be passed as a parameter for the `sorage` creation
-     *
-     * @code
-     * std::is_invocable_v<OnRequest, const message_type &, context_type &, const std::smatch &>
-     * @endcode
-     *
-     * @param path The <tt>std::string</tt> type and refers to
-     * RegExp associated within the handlers
-     *
-     * @param on_request A variadic template of the handlers to be
-     * sequentially executed for the given <tt>path</tt>
-     *
-     * @returns void
-     *
-     * @note A handler must return either void or bool
-     * - in case when the return type is void then the next handler executes right after the current is finished
-     * - in case when the return type is the boolean data type and then the execution is based on the following vlaues:
-     *   - if return type is equal to `true` then the next handler executes
-     *   - if return type is equal to `false` then the complete chain of handlers execution breaks
-     *
-     * @note Two cases of handlers declaration:
-     * - std::function<bool(const message_type &, context_type &, const std::smatch &)>
-     * - std::function<void(const message_type &, context_type &, const std::smatch &)>
-     *
-     * @note The callback has to be compatible with the signatures which accept the following set of parameters:
-     * - const message_type &, context_type &, const std::smatch &
-     * - const message_type &, context_type &
-     * - context_type &
-     *
-     * @note The method is activated for the session::is_request == true a.k.a server mode
-     */
-    template <
-        class... OnRequest,
+  /// The method adds handlers and links them within the given path (RegExp) for
+  /// the `"GET"` method
+  /**
+   * The method associates a list of handlers and binds to the path for cases,
+   * when the respective<br> HTTP method is equal to `"GET"`. The method is
+   * instantiated under the following conditions:
+   * - `template<class ...OnRequest>` carries the list of executables routines
+   * - the methods comply and respect the signature and may be passed as a
+   * parameter for the `sorage` creation
+   *
+   * @code
+   * std::is_invocable_v<OnRequest, const message_type &, context_type &, const
+   * std::smatch &>
+   * @endcode
+   *
+   * @param path The <tt>std::string</tt> type and refers to
+   * RegExp associated within the handlers
+   *
+   * @param on_request A variadic template of the handlers to be
+   * sequentially executed for the given <tt>path</tt>
+   *
+   * @returns void
+   *
+   * @note A handler must return either void or bool
+   * - in case when the return type is void then the next handler executes right
+   * after the current is finished
+   * - in case when the return type is the boolean data type and then the
+   * execution is based on the following vlaues:
+   *   - if return type is equal to `true` then the next handler executes
+   *   - if return type is equal to `false` then the complete chain of handlers
+   * execution breaks
+   *
+   * @note Two cases of handlers declaration:
+   * - std::function<bool(const message_type &, context_type &, const
+   * std::smatch &)>
+   * - std::function<void(const message_type &, context_type &, const
+   * std::smatch &)>
+   *
+   * @note The callback has to be compatible with the signatures which accept
+   * the following set of parameters:
+   * - const message_type &, context_type &, const std::smatch &
+   * - const message_type &, context_type &
+   * - context_type &
+   *
+   * @note The method is activated for the session::is_request == true a.k.a
+   * server mode
+   */
+  template <class... OnRequest,
 #if not ROUTER_DOXYGEN
-        bool is_request = session_type::is_request::value,
-        std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnRequest...> && is_request, bool> = true
+            bool is_request = session_type::is_request::value,
+            std::enable_if_t<
+                utility::is_class_creatable_v<storage_type, OnRequest...> &&
+                    is_request,
+                bool> = true
 #endif
-        >
-    ROUTER_DECL void
-    get(const std::string& path, OnRequest&&... on_request)
-    {
-        add_resource(path, method_type::get, storage_type { std::forward<OnRequest>(on_request)... });
-    }
+            >
+  ROUTER_DECL void get(const std::string &path, OnRequest &&...on_request) {
+    add_resource(path, method_type::get,
+                 storage_type{std::forward<OnRequest>(on_request)...});
+  }
 
-    /// The methods adds handlers and links them within the given path (RegExp) for the `"PUT"` method
-    /**
-     * @param path The <tt>std::string</tt> type and refers to RegExp associated within the handlers
-     * @param on_request A variadic template of the handlers to be sequentially executed for the given <tt>path</tt>
-     * @returns void
-     *
-     * @note For more in details please refere to the @ref get() method description
-     *
-     * @note The method is activated for the session::is_request == true a.k.a server mode
-     */
-    template <
-        class... OnRequest,
+  /// The methods adds handlers and links them within the given path (RegExp)
+  /// for the `"PUT"` method
+  /**
+   * @param path The <tt>std::string</tt> type and refers to RegExp associated
+   * within the handlers
+   * @param on_request A variadic template of the handlers to be sequentially
+   * executed for the given <tt>path</tt>
+   * @returns void
+   *
+   * @note For more in details please refere to the @ref get() method
+   * description
+   *
+   * @note The method is activated for the session::is_request == true a.k.a
+   * server mode
+   */
+  template <class... OnRequest,
 #if not ROUTER_DOXYGEN
-        bool is_request = session_type::is_request::value,
-        std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnRequest...> && is_request, bool> = true
+            bool is_request = session_type::is_request::value,
+            std::enable_if_t<
+                utility::is_class_creatable_v<storage_type, OnRequest...> &&
+                    is_request,
+                bool> = true
 #endif
-        >
-    ROUTER_DECL void
-    put(const std::string& path, OnRequest&&... on_request)
-    {
-        add_resource(path, method_type::put, storage_type { std::forward<OnRequest>(on_request)... });
-    }
+            >
+  ROUTER_DECL void put(const std::string &path, OnRequest &&...on_request) {
+    add_resource(path, method_type::put,
+                 storage_type{std::forward<OnRequest>(on_request)...});
+  }
 
-    /// The methods adds handlers and links them within the given path (RegExp) for the `"POST"` method
-    /**
-     * @param path The <tt>std::string</tt> type and refers to RegExp associated within the handlers
-     * @param on_request A variadic template of the handlers to be sequentially executed for the given <tt>path</tt>
-     * @returns void
-     *
-     * @note For more in details please refere to the @ref get() method description
-     *
-     * @note The method is activated for the session::is_request == true a.k.a server mode
-     */
-    template <
-        class... OnRequest,
+  /// The methods adds handlers and links them within the given path (RegExp)
+  /// for the `"POST"` method
+  /**
+   * @param path The <tt>std::string</tt> type and refers to RegExp associated
+   * within the handlers
+   * @param on_request A variadic template of the handlers to be sequentially
+   * executed for the given <tt>path</tt>
+   * @returns void
+   *
+   * @note For more in details please refere to the @ref get() method
+   * description
+   *
+   * @note The method is activated for the session::is_request == true a.k.a
+   * server mode
+   */
+  template <class... OnRequest,
 #if not ROUTER_DOXYGEN
-        bool is_request = session_type::is_request::value,
-        std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnRequest...> && is_request, bool> = true
+            bool is_request = session_type::is_request::value,
+            std::enable_if_t<
+                utility::is_class_creatable_v<storage_type, OnRequest...> &&
+                    is_request,
+                bool> = true
 #endif
-        >
-    ROUTER_DECL void
-    post(const std::string& path, OnRequest&&... on_request)
-    {
-        add_resource(path, method_type::post, storage_type { std::forward<OnRequest>(on_request)... });
-    }
+            >
+  ROUTER_DECL void post(const std::string &path, OnRequest &&...on_request) {
+    add_resource(path, method_type::post,
+                 storage_type{std::forward<OnRequest>(on_request)...});
+  }
 
-    /// The methods adds handlers and links them within the given path (RegExp) for the `"DELETE"` method
-    /**
-     * @param path The <tt>std::string</tt> type and refers to RegExp associated within the handlers
-     * @param on_request A variadic template of the handlers to be sequentially executed for the given <tt>path</tt>
-     * @returns void
-     *
-     * @note For more in details please refere to the @ref get() method description
-     *
-     * @note The method is activated for the session::is_request == true a.k.a server mode
-     */
-    template <
-        class... OnRequest,
+  /// The methods adds handlers and links them within the given path (RegExp)
+  /// for the `"DELETE"` method
+  /**
+   * @param path The <tt>std::string</tt> type and refers to RegExp associated
+   * within the handlers
+   * @param on_request A variadic template of the handlers to be sequentially
+   * executed for the given <tt>path</tt>
+   * @returns void
+   *
+   * @note For more in details please refere to the @ref get() method
+   * description
+   *
+   * @note The method is activated for the session::is_request == true a.k.a
+   * server mode
+   */
+  template <class... OnRequest,
 #if not ROUTER_DOXYGEN
-        bool is_request = session_type::is_request::value,
-        std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnRequest...> && is_request, bool> = true
+            bool is_request = session_type::is_request::value,
+            std::enable_if_t<
+                utility::is_class_creatable_v<storage_type, OnRequest...> &&
+                    is_request,
+                bool> = true
 #endif
-        >
-    ROUTER_DECL void
-    delete_(const std::string& path, OnRequest&&... on_request)
-    {
-        add_resource(path, method_type::delete_, storage_type { std::forward<OnRequest>(on_request)... });
-    }
+            >
+  ROUTER_DECL void delete_(const std::string &path, OnRequest &&...on_request) {
+    add_resource(path, method_type::delete_,
+                 storage_type{std::forward<OnRequest>(on_request)...});
+  }
 
-    /// The actions executors when no handlers for the resource are found
-    /**
-     * @param on_action the list of actions to be seq. invoked
-     * @returns void
-     *
-     * @note The same set of rules are applied as for other method, @ref get()
-     *
-     * @note The method is activated for the session::is_request == true a.k.a server mode
-     */
-    template <
-        class... OnAction,
+  /// The actions executors when no handlers for the resource are found
+  /**
+   * @param on_action the list of actions to be seq. invoked
+   * @returns void
+   *
+   * @note The same set of rules are applied as for other method, @ref get()
+   *
+   * @note The method is activated for the session::is_request == true a.k.a
+   * server mode
+   */
+  template <class... OnAction,
 #if not ROUTER_DOXYGEN
-        bool is_request = session_type::is_request::value,
-        std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnAction...> && is_request, bool> = true
+            bool is_request = session_type::is_request::value,
+            std::enable_if_t<
+                utility::is_class_creatable_v<storage_type, OnAction...> &&
+                    is_request,
+                bool> = true
 #endif
-        >
-    ROUTER_DECL void
-    not_found(OnAction&&... on_action)
-    {
-        add_resource("", method_type::unknown, storage_type { std::forward<OnAction>(on_action)... });
-    }
+            >
+  ROUTER_DECL void not_found(OnAction &&...on_action) {
+    add_resource("", method_type::unknown,
+                 storage_type{std::forward<OnAction>(on_action)...});
+  }
 
-    /// The action executorand invokes one a responsed is received
-    /**
-     * @param on_action The list of actions to be seq. invoked
-     * @return void
-     *
-     * @note The method is activated for the session::is_request != true a.k.a client mode
-     */
-    template <
-        class... OnAction,
+  /// The action executorand invokes one a responsed is received
+  /**
+   * @param on_action The list of actions to be seq. invoked
+   * @return void
+   *
+   * @note The method is activated for the session::is_request != true a.k.a
+   * client mode
+   */
+  template <class... OnAction,
 #if not ROUTER_DOXYGEN
-        bool is_request = session_type::is_request::value,
-        std::enable_if_t<
-            utility::is_class_creatable_v<storage_type, OnAction...> && !is_request, bool> = true
+            bool is_request = session_type::is_request::value,
+            std::enable_if_t<
+                utility::is_class_creatable_v<storage_type, OnAction...> &&
+                    !is_request,
+                bool> = true
 #endif
-        >
-    ROUTER_DECL void
-    handle_response(OnAction&&... on_action)
-    {
-        add_resource("", method_type::unknown, storage_type { std::forward<OnAction>(on_action)... });
-    }
+            >
+  ROUTER_DECL void handle_response(OnAction &&...on_action) {
+    add_resource("", method_type::unknown,
+                 storage_type{std::forward<OnAction>(on_action)...});
+  }
 
-    /// Obtains a const pointer to the resource map
-    /**
-     * @returns method_const_map_pointer
-     */
-    method_const_map_pointer
-    get_resource_map() const;
+  /// Obtains a const pointer to the resource map
+  /**
+   * @returns method_const_map_pointer
+   */
+  method_const_map_pointer get_resource_map() const;
 
-private:
-    void
-    add_resource(const std::string& path, const method_type& method, storage_type&& storage);
+ private:
+  void add_resource(const std::string &path, const method_type &method,
+                    storage_type &&storage);
 
-    static bool
-    not_found_handler(const typename session_type::message_type& rq,
-        typename session_type::context_type& ctx)
-    {
-        ctx.send(make_string_response(http::status::not_found,
-            rq.version(), "Not Found"));
-        return false; // break the chain of calls
-    }
+  static bool not_found_handler(const typename session_type::message_type &rq,
+                                typename session_type::context_type &ctx) {
+    ctx.send(make_string_response(http::status::not_found, rq.version(),
+                                  "Not Found"));
+    return false;  // break the chain of calls
+  }
 
-    method_map_pointer m_method_map;
-    mutable mutex_pointer_type m_mutex;
+  method_map_pointer m_method_map;
+  mutable mutex_pointer_type m_mutex;
 };
 
-} // namespace beast_router
+}  // namespace beast_router
 
 #include "impl/router.ipp"

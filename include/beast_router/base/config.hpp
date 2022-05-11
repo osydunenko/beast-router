@@ -7,19 +7,19 @@
 
 #if not defined(ROUTER_ASSUME)
 #if defined(BOOST_GCC)
-#define ROUTER_ASSUME(cond)          \
-    do {                             \
-        if (!cond)                   \
-            __builtin_unreachable(); \
-    } while (0)
+#define ROUTER_ASSUME(cond)             \
+  do {                                  \
+    if (!cond) __builtin_unreachable(); \
+  } while (0)
 #else
 #define ROUTER_ASSUME(cond) \
-    do {                    \
-    } while (0)
+  do {                      \
+  } while (0)
 #endif
 #endif
 
-#if defined(BOOST_NO_CXX17_IF_CONSTEXPR) || defined(BOOST_NO_CXX17_FOLD_EXPRESSIONS)
+#if defined(BOOST_NO_CXX17_IF_CONSTEXPR) || \
+    defined(BOOST_NO_CXX17_FOLD_EXPRESSIONS)
 #error The library requires C++17: a conforming compiler is needed
 #endif
 

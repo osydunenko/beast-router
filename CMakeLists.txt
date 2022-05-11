@@ -111,7 +111,7 @@ endif()
 file(GLOB_RECURSE SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/*)
 add_custom_target(
     clangformat
-    COMMAND ${CLANGFORMAT_PATH} -i -style=WebKit ${SRCS}
+    COMMAND ${CLANGFORMAT_PATH} -i --style=Google ${SRCS}
     WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/include
     COMMENT "Fomatting the code with ${CLANGFORMAT_PATH}"
     VERBATIM
