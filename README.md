@@ -9,7 +9,8 @@
 - [Usage](#usage)
 - [Limitations](#limitations)
 
-## Synopsis {#synopsis}
+<div id="synopsis" />
+## Synopsis
 
 This is yet another C++ microframework for running web services.
 The framework is build on top of [Boost.Beast](https://github.com/boostorg/beast) and aimed the
@@ -21,7 +22,8 @@ The library is designed for:
 - **Header only library:** Uses C++17
 - **Symmetry:** Role-agnostic, supports building clients (in progress), servers, or both
 
-## Dependencies {#dependencies}
+<div id="dependencies" />
+## Dependencies
 - Boost Libraries >= 1.74.0 as sys. dependency
 	- Boost.System
 	- Boost.Thread
@@ -30,7 +32,8 @@ The library is designed for:
 	- Boost.Beast
 - Doxygen >= 1.9.2
 
-## Documentation {#documentation}
+<div id="documentation" />
+## Documentation
 
 For the `api` doc generation you need to execute a target by using your generator passed to cmake.
 The respective target is "excluded from all" (requires a standalone execution) which is called as `doc`
@@ -44,7 +47,8 @@ make doc
 open doc/html/index.html
 ```
 
-## Building {#building}
+<div id="building" />
+## Building
 `beast-router` is a header-only. So, to use it just add the necessary `#include` line to your source code, such as the following:
 
 ```cpp
@@ -63,10 +67,12 @@ target_link_libraries(
 )
 ```
 
-## Usage {#usage}
+<div id="usage" />
+## Usage
 
 The examples which you can build and run are in the `example` directory -- [Link](https://github.com/osydunenko/beast-router/tree/main/examples)
 
-## Limitations {#limitations}
+<div id="limitations" />
+## Limitations
 - WebSocket support
 - TLS/Secure sockets
