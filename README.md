@@ -10,6 +10,7 @@
 - [Limitations](#limitations)
 
 <div id="synopsis" />
+
 ## Synopsis
 
 This is yet another C++ microframework for running web services.
