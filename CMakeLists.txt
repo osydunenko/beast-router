@@ -20,7 +20,7 @@ add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 # Add compile options
 add_library(common_options INTERFACE)
-add_library(BRouter::common_options ALIAS common_options)
+add_library(${PROJECT_NAME}::common_options ALIAS common_options)
 target_compile_options(
     common_options
     INTERFACE
@@ -37,7 +37,7 @@ target_compile_options(
 )
 
 add_library(common_libraries INTERFACE)
-add_library(BRouter::common_libraries ALIAS common_libraries)
+add_library(${PROJECT_NAME}::common_libraries ALIAS common_libraries)
 target_link_libraries(
     common_libraries
     INTERFACE
@@ -45,12 +45,12 @@ target_link_libraries(
 )
 
 add_library(common_definitions INTERFACE)
-add_library(BRouter::common_definitions ALIAS common_definitions)
+add_library(${PROJECT_NAME}::common_definitions ALIAS common_definitions)
 target_compile_definitions(
     common_definitions
     INTERFACE
-        BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
         BOOST_BEAST_USE_STD_STRING_VIEW
+        BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
 )
 
 # Check prereqs
@@ -72,9 +72,9 @@ target_link_libraries(
     INTERFACE
         Boost::system
         Boost::thread
-        BRouter::common_options
-        BRouter::common_libraries
-        BRouter::common_definitions
+        ${PROJECT_NAME}::common_options
+        ${PROJECT_NAME}::common_libraries
+        ${PROJECT_NAME}::common_definitions
         $<$<BOOL:${LINK_SSL}>:OpenSSL::Crypto OpenSSL::SSL>
 )
 
@@ -92,7 +92,9 @@ if (ROUTER_DOXYGEN)
     set(DOXYGEN_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
     set(DOXYGEN_OUT ${CMAKE_CURRENT_BINARY_DIR}/doc/Doxyfile)
     set(DOXYGEN_DOC_OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/doc)
-    set(DOXYGEN_INPUT ${CMAKE_CURRENT_SOURCE_DIR}/include/beast_router/)
+    set(DOXYGEN_README ${CMAKE_CURRENT_SOURCE_DIR}/README.md)
+    set(DOXYGEN_FILES ${CMAKE_CURRENT_SOURCE_DIR}/include/beast_router/)
+    set(DOXYGEN_INPUT "${DOXYGEN_README} ${DOXYGEN_FILES}")
 
     # configure the file
     configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY NEWLINE_STYLE UNIX)
@@ -112,7 +114,7 @@ file(GLOB_RECURSE SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/*)
 add_custom_target(
     clangformat
     COMMAND ${CLANGFORMAT_PATH} -i --style=Google ${SRCS}
-    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/include
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
     COMMENT "Fomatting the code with ${CLANGFORMAT_PATH}"
     VERBATIM
 )
