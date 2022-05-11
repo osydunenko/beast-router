@@ -2,6 +2,7 @@
 
 #include "base/config.hpp"
 #include "base/lockable.hpp"
+#include "base/storage.hpp"
 #include "common/http_utility.hpp"
 #include "common/utility.hpp"
 #include <regex>

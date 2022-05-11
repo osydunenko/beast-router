@@ -50,6 +50,7 @@ target_compile_definitions(
     common_definitions
     INTERFACE
         BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
+        BOOST_BEAST_USE_STD_STRING_VIEW
 )
 
 # Check prereqs
