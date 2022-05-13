@@ -145,9 +145,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_read() {
 
 SESSION_TEMPLATE_DECLARE
 void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_read(
-    boost::system::error_code ec, size_t bytes_transferred) {
-  boost::ignore_unused(bytes_transferred);
-
+    boost::system::error_code ec, [[maybe_unused]] size_t bytes_transferred) {
   m_timer.cancel();
 
   if (ec == boost::beast::http::error::end_of_stream) {
@@ -200,9 +198,8 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_write(
 
 SESSION_TEMPLATE_DECLARE
 void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_write(
-    boost::system::error_code ec, std::size_t bytes_transferred, bool close) {
-  boost::ignore_unused(bytes_transferred);
-
+    boost::system::error_code ec,
+    [[maybe_unused]] std::size_t bytes_transferred, bool close) {
   m_timer.cancel();
 
   if (ec == boost::beast::http::error::end_of_stream) {

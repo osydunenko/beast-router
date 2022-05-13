@@ -190,11 +190,12 @@ class session {
     explicit impl(socket_type &&socket, buffer_type &&buffer,
                   const router_type &router, const on_error_type &on_error);
 
-    self_type &recv();
-    self_type &recv(timer_duration_type duration);
+    [[nodiscard]] self_type &recv();
+    [[nodiscard]] self_type &recv(timer_duration_type duration);
 
     template <class Message>
-    self_type &send(Message &&message, timer_duration_type duration);
+    [[nodiscard]] self_type &send(Message &&message,
+                                  timer_duration_type duration);
 
    private:
     void do_timer(timer_duration_type duraion);
@@ -283,21 +284,21 @@ class session {
     /**
      * @returns bool
      */
-    bool is_open() const;
+    [[nodiscard]] bool is_open() const;
 
     /// Obtains the user data; lvalue reference context
     /**
      * @returns Type reference
      */
     template <class Type>
-    Type &get_user_data() &;
+    [[nodiscard]] Type &get_user_data() &;
 
     /// Obtains the user data; rvalue reference context
     /**
      * @returns Type rvalue eference
      */
     template <class Type>
-    Type &&get_user_data() &&;
+    [[nodiscard]] Type &&get_user_data() &&;
 
     /// Sets user data
     /**

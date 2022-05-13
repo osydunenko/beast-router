@@ -95,7 +95,7 @@ class router {
   /**
    * @returns mutex_type
    */
-  mutex_type &get_mutex() const;
+  [[nodiscard]] mutex_type &get_mutex() const;
 
   /// Obtains a pointer to the `mutext_type`
   /**
@@ -104,7 +104,7 @@ class router {
    *
    * @returns mutex_pointer_type
    */
-  mutex_pointer_type get_mutex_pointer() const;
+  [[nodiscard]] mutex_pointer_type get_mutex_pointer() const;
 
   /// The method adds handlers and links them within the given path (RegExp) for
   /// the `"GET"` method

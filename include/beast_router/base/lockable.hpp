@@ -7,15 +7,13 @@
 #include "../common/utility.hpp"
 #include "config.hpp"
 
-#define LOCKABLE_ENTER_TO_READ(shared_mutex)                     \
-  const auto &dummy_lock =                                       \
-      beast_router::base::lockable::enter_to_read(shared_mutex); \
-  boost::ignore_unused(dummy_lock);
+#define LOCKABLE_ENTER_TO_READ(shared_mutex) \
+  [[maybe_unused]] const auto &dummy_lock =  \
+      beast_router::base::lockable::enter_to_read(shared_mutex);
 
-#define LOCKABLE_ENTER_TO_WRITE(shared_mutex)                     \
-  const auto &dummy_lock =                                        \
-      beast_router::base::lockable::enter_to_write(shared_mutex); \
-  boost::ignore_unused(dummy_lock);
+#define LOCKABLE_ENTER_TO_WRITE(shared_mutex) \
+  [[maybe_unused]] const auto &dummy_lock =   \
+      beast_router::base::lockable::enter_to_write(shared_mutex);
 
 namespace beast_router {
 namespace base {
