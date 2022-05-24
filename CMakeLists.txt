@@ -114,7 +114,7 @@ file(GLOB_RECURSE SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/*)
 file(GLOB_RECURSE EX_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cpp)
 file(GLOB_RECURSE TST_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
 add_custom_target(
-    clangformat
+    ${PROJECT_NAME}_clangformat
     COMMAND ${CLANGFORMAT_PATH} -i --style=Google ${SRCS} ${EX_SRCS} ${TST_SRCS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
     COMMENT "Fomatting the code with ${CLANGFORMAT_PATH}"
