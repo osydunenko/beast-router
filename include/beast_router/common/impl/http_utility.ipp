@@ -1,21 +1,17 @@
 #pragma once
 
 namespace beast_router {
+namespace mime_type {
 
-const mime_type::container_type mime_type::mime_types = {
-    {"html", "text/html"}, {"js", "application/javascript"},
-    {"css", "text/css"},   {"png", "image/png"},
-    {"jpg", "image/jpeg"}, {"fvl", "video/x-flv"}};
-
-std::string_view mime_type::get(std::string_view ext) {
-  std::string_view ret = mime_type::default_mime;
-  const mime_type::container_type &types = mime_type::mime_types;
-  if (auto it = types.find(ext); it != types.end()) {
+static std::string_view get_mime_type(std::string_view ext) {
+  std::string_view ret = default_mime;
+  if (auto it = mime_types.find(ext); it != mime_types.end()) {
     ret = it->second;
   }
-
   return ret;
 }
+
+}  // namespace mime_type
 
 template <class Body, class Version, class... Args,
           std::enable_if_t<std::is_convertible_v<Version, unsigned>, bool>>
@@ -75,7 +71,7 @@ static http_file_response make_file_response(Version version,
   auto rp = create_response<http::file_body>(http::status::ok, version,
                                              std::move(body));
   rp.content_length(size);
-  rp.set(http::field::content_type, mime_type::get(std::move(file_extension)));
+  rp.set(http::field::content_type, mime_type::get_mime_type(std::move(file_extension)));
   return rp;
 }
 

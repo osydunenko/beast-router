@@ -71,27 +71,28 @@ struct message_creator<IsRequest, http::empty_body> {
 
 }  // namespace details
 
-/// The common struct to work with the mime types
-struct mime_type {
-  /// The self type
-  using self_type = mime_type;
+namespace mime_type {
 
-  /// Map container type holds the mime types
-  using container_type = std::map<std::string_view, std::string_view>;
+/// Mime types container type
+using container_type = std::map<std::string_view, std::string_view>;
 
-  /// The defalt mime type
-  static constexpr std::string_view default_mime = "application/text";
+/// Default mime type
+static constexpr std::string_view default_mime = "application/type";
 
-  /// Returns a mime type by the given extension
-  /**
-   * @param ext An extension for a type to be returned
-   * @returns mime type
-   */
-  static std::string_view get(std::string_view ext);
+/// Mime types list
+static const container_type mime_types{
+    {"html", "text/html"}, {"js", "application/javascript"},
+    {"css", "text/css"},   {"png", "image/png"},
+    {"jpg", "image/jpeg"}, {"fvl", "video/x-flv"}};
 
- private:
-  static const container_type mime_types;
-};
+/// Returns a mime type by the given extension
+/**
+ * @param ext An extension for a type to be returned
+ * @returns mime type
+ */
+static std::string_view get_mime_type(std::string_view ext);
+
+}  // namespace mime_type
 
 /// Creates a response associated with the Body type
 /**
