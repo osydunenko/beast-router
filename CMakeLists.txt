@@ -121,7 +121,7 @@ add_custom_target(
     VERBATIM
 )
 # Exclude the coverage target from all
-set_target_properties(clangformat PROPERTIES EXLCLUDE_FROM_ALL TRUE)
+set_target_properties(${PROJECT_NAME}_clangformat PROPERTIES EXLCLUDE_FROM_ALL TRUE)
 
 if (BUILD_EXAMPLES)
     add_subdirectory(examples)
