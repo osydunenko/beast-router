@@ -31,10 +31,15 @@ create_request(boost::beast::http::verb verb, Version version,
 }
 
 template <class Version>
+static http_empty_response make_empty_response(http::status code,
+                                               Version version) {
+  return create_response<http::empty_body>(code, version);
+}
+
+template <class Version>
 static http_empty_response make_moved_response(Version version,
                                                std::string_view location) {
-  auto rp = create_response<http::empty_body>(http::status::moved_permanently,
-                                              version);
+  auto rp = make_empty_response(http::status::moved_permanently, version);
   rp.set(http::field::location, location);
   return rp;
 }
@@ -71,7 +76,8 @@ static http_file_response make_file_response(Version version,
   auto rp = create_response<http::file_body>(http::status::ok, version,
                                              std::move(body));
   rp.content_length(size);
-  rp.set(http::field::content_type, mime_type::get_mime_type(std::move(file_extension)));
+  rp.set(http::field::content_type,
+         mime_type::get_mime_type(std::move(file_extension)));
   return rp;
 }
 

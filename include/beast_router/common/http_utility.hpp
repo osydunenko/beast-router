@@ -122,6 +122,16 @@ static typename details::message_creator<true, Body>::return_type
 create_request(boost::beast::http::verb verb, Version version,
                std::string_view target, Args &&...args);
 
+/// Creates empty response
+/**
+ * @param code HTTP status code
+ * @param version HTTP version
+ * @returns http_empty_response with the HTTP code
+ */
+template <class Version>
+static http_empty_response make_empty_response(http::status code,
+                                               Version version);
+
 /// Creates redirection response within the `Location`
 /**
  * @param version HTTP version
