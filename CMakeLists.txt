@@ -2,10 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 
 project(beast_router)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Options decl.
@@ -18,11 +17,48 @@ option(LINK_ASAN "Build with asan" OFF)
 add_library(${PROJECT_NAME} INTERFACE)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
-# Add compile options
-add_library(common_options INTERFACE)
-add_library(${PROJECT_NAME}::common_options ALIAS common_options)
+# Check prereqs
+find_package(Boost 1.74.0 REQUIRED COMPONENTS system thread)
+find_package(Doxygen 1.9.1)
+find_package(OpenSSL 3.0.5 COMPONENTS Crypto SSL)
+
+find_program(CLANGFORMAT_PATH clang-format)
+
+target_include_directories(
+    ${PROJECT_NAME}
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:Boost::headers>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+target_link_libraries(
+    ${PROJECT_NAME}
+    INTERFACE
+        Boost::system
+        Boost::thread
+        $<$<BOOL:${LINK_SSL}>:OpenSSL::Crypto OpenSSL::SSL>
+)
+
+target_compile_definitions(
+    ${PROJECT_NAME}
+    INTERFACE
+        $<$<BOOL:${LINK_SSL}>:LINK_SSL>
+        BOOST_BEAST_USE_STD_STRING_VIEW
+        BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
+)
+
+target_compile_features(
+    ${PROJECT_NAME}
+    INTERFACE
+        cxx_std_17
+)
+
+add_library(compile_options INTERFACE)
+add_library(${PROJECT_NAME}::compile_options ALIAS compile_options)
+
 target_compile_options(
-    common_options
+    compile_options
     INTERFACE
         -Werror
         -Wextra
@@ -36,52 +72,10 @@ target_compile_options(
         $<$<CXX_COMPILER_ID:Clang>:-stdlib=libc++>
 )
 
-add_library(common_libraries INTERFACE)
-add_library(${PROJECT_NAME}::common_libraries ALIAS common_libraries)
 target_link_libraries(
-    common_libraries
+    compile_options
     INTERFACE
         $<$<BOOL:${LINK_ASAN}>:-fsanitize=address>
-)
-
-add_library(common_definitions INTERFACE)
-add_library(${PROJECT_NAME}::common_definitions ALIAS common_definitions)
-target_compile_definitions(
-    common_definitions
-    INTERFACE
-        BOOST_BEAST_USE_STD_STRING_VIEW
-        BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
-)
-
-# Check prereqs
-find_package(Boost REQUIRED COMPONENTS system thread)
-find_package(Doxygen)
-find_package(OpenSSL COMPONENTS Crypto SSL)
-find_program(CLANGFORMAT_PATH clang-format)
-
-target_include_directories(
-    ${PROJECT_NAME}
-    INTERFACE
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:Boost::headers>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
-
-target_link_libraries(
-    ${PROJECT_NAME}
-    INTERFACE
-        Boost::system
-        Boost::thread
-        ${PROJECT_NAME}::common_options
-        ${PROJECT_NAME}::common_libraries
-        ${PROJECT_NAME}::common_definitions
-        $<$<BOOL:${LINK_SSL}>:OpenSSL::Crypto OpenSSL::SSL>
-)
-
-target_compile_definitions(
-    ${PROJECT_NAME}
-    INTERFACE
-        $<$<BOOL:${LINK_SSL}>:LINK_SSL>
 )
 
 if (ROUTER_DOXYGEN)
@@ -132,15 +126,23 @@ if (BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
-message(STATUS "-------------------------------------------------------")
-message(STATUS "BUILD_EXAMPLES:..............${BUILD_EXAMPLES}")
-message(STATUS "BUILD_TESTS:.................${BUILD_TESTS}")
-message(STATUS "ROUTER_DOXYGEN:..............${ROUTER_DOXYGEN}")
-message(STATUS "LINK_SSL:....................${LINK_SSL}")
-message(STATUS "CMAKE_BUILD_TYPE:............${CMAKE_BUILD_TYPE}")
-message(STATUS "CMAKE_VERSION:...............${CMAKE_VERSION}")
-message(STATUS "CMAKE_C_COMPILER:............${CMAKE_C_COMPILER}")
-message(STATUS "CMAKE_CXX_COMPILER:..........${CMAKE_CXX_COMPILER}")
-message(STATUS "DOXYGEN_EXECUTABLE:..........${DOXYGEN_EXECUTABLE}")    
-message(STATUS "BOOST VERSION:...............${Boost_VERSION_STRING}")    
-message(STATUS "-------------------------------------------------------")
+install(TARGETS ${PROJECT_NAME}
+    EXPORT ${PROJECT_NAME}_Targets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+configure_package_config_file(
+    "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}-config.cmake.in"
+    "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
+
+install(EXPORT ${PROJECT_NAME}_Targets
+    FILE ${PROJECT_NAME}Targets.cmake
+    NAMESPACE ${PROJECT_NAME}::
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
+
+install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}-config.cmake"
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
+
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ DESTINATION include)

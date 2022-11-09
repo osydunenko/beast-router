@@ -31,6 +31,7 @@ function(add_unit_test TARGET)
         ${TARGET}
         PRIVATE
             beast_router::beast_router
+            beast_router::compile_options
             Boost::unit_test_framework
     )
 
