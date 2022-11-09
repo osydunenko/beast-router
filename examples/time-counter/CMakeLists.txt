@@ -6,6 +6,7 @@ target_link_libraries(
     time_counter
     PRIVATE
         beast_router::beast_router
+        beast_router::compile_options
 )
 
 set(DOC_BASE_PATH "${CMAKE_CURRENT_BINARY_DIR}/doc")

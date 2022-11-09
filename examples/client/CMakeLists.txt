@@ -6,4 +6,5 @@ target_link_libraries(
     client
     PRIVATE
         beast_router::beast_router
+        beast_router::compile_options
 )

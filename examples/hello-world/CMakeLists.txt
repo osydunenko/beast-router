@@ -6,4 +6,5 @@ target_link_libraries(
     hello_world
     PRIVATE
         beast_router::beast_router
+        beast_router::compile_options
 )

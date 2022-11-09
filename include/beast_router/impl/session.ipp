@@ -292,8 +292,8 @@ SESSION_TEMPLATE_DECLARE
 template <class Impl>
 template <class Type>
 void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::set_user_data(
-    Type data) {
-  m_user_data = std::make_any<Type>(std::move(data));
+    Type &&data) {
+  m_user_data = std::make_any<Type>(std::forward<Type>(data));
 }
 
 SESSION_TEMPLATE_DECLARE

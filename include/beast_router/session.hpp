@@ -306,7 +306,7 @@ class session {
      * @returns void
      */
     template <class Type>
-    void set_user_data(Type data);
+    void set_user_data(Type &&data);
 
    protected:
     template <class Message, class TimeDuration>
