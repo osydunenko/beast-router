@@ -113,7 +113,8 @@ add_custom_target(
     COMMENT "Fomatting the code with ${CLANGFORMAT_PATH}"
     VERBATIM
 )
-# Exclude the coverage target from all
+
+# Exclude the clangformat targets from all
 set_target_properties(${PROJECT_NAME}_clangformat PROPERTIES EXLCLUDE_FROM_ALL TRUE)
 
 if (BUILD_EXAMPLES)
