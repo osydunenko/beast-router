@@ -28,7 +28,6 @@ target_include_directories(
     ${PROJECT_NAME}
     INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:Boost::headers>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
@@ -114,7 +113,8 @@ add_custom_target(
     COMMENT "Fomatting the code with ${CLANGFORMAT_PATH}"
     VERBATIM
 )
-# Exclude the coverage target from all
+
+# Exclude the clangformat targets from all
 set_target_properties(${PROJECT_NAME}_clangformat PROPERTIES EXLCLUDE_FROM_ALL TRUE)
 
 if (BUILD_EXAMPLES)
