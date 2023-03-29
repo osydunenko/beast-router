@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(beast_router)
+project(beast_router VERSION 1.0.0 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
@@ -24,31 +24,27 @@ find_package(OpenSSL 3.0.5 COMPONENTS Crypto SSL)
 
 find_program(CLANGFORMAT_PATH clang-format)
 
-target_include_directories(
-    ${PROJECT_NAME}
+target_include_directories(${PROJECT_NAME}
     INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-target_link_libraries(
-    ${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME}
     INTERFACE
         Boost::system
         Boost::thread
         $<$<BOOL:${LINK_SSL}>:OpenSSL::Crypto OpenSSL::SSL>
 )
 
-target_compile_definitions(
-    ${PROJECT_NAME}
+target_compile_definitions(${PROJECT_NAME}
     INTERFACE
         $<$<BOOL:${LINK_SSL}>:LINK_SSL>
         BOOST_BEAST_USE_STD_STRING_VIEW
         BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
 )
 
-target_compile_features(
-    ${PROJECT_NAME}
+target_compile_features(${PROJECT_NAME}
     INTERFACE
         cxx_std_17
 )
@@ -71,8 +67,7 @@ target_compile_options(
         $<$<CXX_COMPILER_ID:Clang>:-stdlib=libc++>
 )
 
-target_link_libraries(
-    compile_options
+target_link_libraries(compile_options
     INTERFACE
         $<$<BOOL:${LINK_ASAN}>:-fsanitize=address>
 )
@@ -97,20 +92,25 @@ if (ROUTER_DOXYGEN)
         doc
         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/beast_router/
-        COMMENT "Generating API Documentation"
+        COMMENT "Generating API Documentation..."
         VERBATIM
     )
 endif()
 
 # Decl. clang-format target
-file(GLOB_RECURSE SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/*)
+file(GLOB_RECURSE SRCS ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp ${CMAKE_CURRENT_SOURCE_DIR}/include/*.ipp)
 file(GLOB_RECURSE EX_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/examples/*.cpp)
 file(GLOB_RECURSE TST_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp)
-add_custom_target(
-    ${PROJECT_NAME}_clangformat
-    COMMAND ${CLANGFORMAT_PATH} -i --style=Google ${SRCS} ${EX_SRCS} ${TST_SRCS}
+add_custom_target(${PROJECT_NAME}_clangformat
+    COMMAND ${CLANGFORMAT_PATH} -i --style=WebKit ${SRCS} ${EX_SRCS} ${TST_SRCS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
-    COMMENT "Fomatting the code with ${CLANGFORMAT_PATH}"
+    COMMENT "Fomatting the code with ${CLANGFORMAT_PATH}..."
+    VERBATIM
+)
+
+add_custom_target(debug
+    COMMAND ${CMAKE_COMMAND} -DBUILD_EXAMPLES=ON -DBUILD_TESTS=ON -DLINK_ASAN=ON -DCMAKE_BUILD_TYPE=Debug ${PROJECT_SOURCE_DIR}
+    COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}
     VERBATIM
 )
 
