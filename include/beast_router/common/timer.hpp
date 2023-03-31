@@ -14,7 +14,7 @@ using namespace std::chrono_literals;
  * @note The class is not copyable nor assignment
  */
 template <class CompletionExecutor, class Timer>
-class timer {
+class timer final {
     static_assert(boost::asio::is_executor<CompletionExecutor>::value,
         "Timer requirements are not met");
 

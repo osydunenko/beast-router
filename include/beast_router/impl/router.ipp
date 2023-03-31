@@ -13,13 +13,13 @@ router<Session>::router()
 }
 
 template <class Session>
-typename router<Session>::mutex_type& router<Session>::get_mutex() const
+ROUTER_DECL typename router<Session>::mutex_type& router<Session>::get_mutex() const
 {
     return *m_mutex;
 }
 
 template <class Session>
-typename router<Session>::mutex_pointer_type
+ROUTER_DECL typename router<Session>::mutex_pointer_type
 router<Session>::get_mutex_pointer() const
 {
     assert(m_mutex);
@@ -27,7 +27,7 @@ router<Session>::get_mutex_pointer() const
 }
 
 template <class Session>
-typename router<Session>::method_const_map_pointer
+ROUTER_DECL typename router<Session>::method_const_map_pointer
 router<Session>::get_resource_map() const
 {
     assert(m_method_map);

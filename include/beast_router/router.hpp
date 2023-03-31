@@ -1,13 +1,12 @@
 #pragma once
 
-#include <regex>
-#include <unordered_map>
-
 #include "base/config.hpp"
 #include "base/lockable.hpp"
 #include "base/storage.hpp"
 #include "common/http_utility.hpp"
 #include "common/utility.hpp"
+#include <regex>
+#include <unordered_map>
 
 namespace beast_router {
 
@@ -44,7 +43,7 @@ namespace beast_router {
  * @endcode
  */
 template <class Session>
-class router {
+class router final {
 public:
     /// The self type
     using self_type = router<Session>;
@@ -85,17 +84,20 @@ public:
     /// Assignment (disallowed)
     self_type& operator=(const router&) = delete;
 
-    /// Constructor
+    /// Constructor (disallowed)
     router(router&&) = delete;
 
-    /// Assignment
-    self_type& operator=(router&&) = default;
+    /// Assignment (disallowed)
+    self_type& operator=(router&&) = delete;
+
+    /// Destructor
+    ~router() = default;
 
     /// Obtains a reference to the `mutex_type`
     /**
      * @returns mutex_type
      */
-    [[nodiscard]] mutex_type& get_mutex() const;
+    [[nodiscard]] ROUTER_DECL mutex_type& get_mutex() const;
 
     /// Obtains a pointer to the `mutext_type`
     /**
@@ -104,7 +106,7 @@ public:
      *
      * @returns mutex_pointer_type
      */
-    [[nodiscard]] mutex_pointer_type get_mutex_pointer() const;
+    [[nodiscard]] ROUTER_DECL mutex_pointer_type get_mutex_pointer() const;
 
     /// The method adds handlers and links them within the given path (RegExp) for
     /// the `"GET"` method
@@ -310,7 +312,7 @@ public:
     /**
      * @returns method_const_map_pointer
      */
-    method_const_map_pointer get_resource_map() const;
+    ROUTER_DECL method_const_map_pointer get_resource_map() const;
 
 private:
     void add_resource(const std::string& path, const method_type& method,

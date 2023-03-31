@@ -11,8 +11,6 @@
 #include "base/strand_stream.hpp"
 #include "common/utility.hpp"
 
-#define LISTENER_TEMPLATE_ATTRIBUTES Protocol, Acceptor, Socket, Endpoint
-
 namespace beast_router {
 
 /// Listens and accepts the incoming connections.
@@ -49,10 +47,10 @@ template <class Protocol = boost::asio::ip::tcp,
     template <typename> class Endpoint = boost::asio::ip::basic_endpoint>
 class listener : public base::strand_stream,
                  public std::enable_shared_from_this<
-                     listener<LISTENER_TEMPLATE_ATTRIBUTES>> {
+                     listener<Protocol, Acceptor, Socket, Endpoint>> {
 public:
     /// The self type
-    using self_type = listener<LISTENER_TEMPLATE_ATTRIBUTES>;
+    using self_type = listener<Protocol, Acceptor, Socket, Endpoint>;
 
     /// The protocol type associated with the endpoint
     using protocol_type = Protocol;

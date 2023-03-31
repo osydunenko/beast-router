@@ -12,7 +12,6 @@
 #include <any>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/signal_set.hpp>
 #include <boost/asio/socket_base.hpp>
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/http/parser.hpp>
@@ -20,8 +19,6 @@
 #include <boost/beast/http/string_body.hpp>
 #include <string_view>
 #include <type_traits>
-
-#define SESSION_TEMPLATE_ATTRIBUTES IsRequest, Body, Buffer, Protocol, Socket
 
 namespace beast_router {
 
@@ -58,7 +55,7 @@ public:
 #endif
 
     /// The self type
-    using self_type = session<SESSION_TEMPLATE_ATTRIBUTES>;
+    using self_type = session<IsRequest, Body, Buffer, Protocol, Socket>;
 
     /// The body type associated with the message_type
     using body_type = Body;

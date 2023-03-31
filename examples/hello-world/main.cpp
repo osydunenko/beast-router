@@ -7,7 +7,7 @@ static std::atomic<uint64_t> counter { 0 };
 
 int main(int, char**)
 {
-    return beast_router::server()
+    return beast_router::http_server()
         .on_get(R"(^.*$)", [](const auto& rq, auto& ctx) {
             std::stringstream i_str;
             i_str << "Hello World: the request was triggered [" << ++counter

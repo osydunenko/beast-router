@@ -4,6 +4,9 @@
     template <class Protocol, class Resolver, class Socket, \
         template <typename> class Endpoint>
 
+#define CONNECTOR_TEMPLATE_ATTRIBUTES \
+    Protocol, Resolver, Socket, Endpoint
+
 namespace beast_router {
 
 CONNECTOR_TEMPLATE_DECLARE

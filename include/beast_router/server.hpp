@@ -3,63 +3,87 @@
 #include "listener.hpp"
 #include "router.hpp"
 #include "session.hpp"
-#include <thread>
-#include <vector>
 
 namespace beast_router {
 
+/// Encapsulates the server handlers and client sessions
+/**
+ * The common class which handles all the active sessions and
+ * dispatch them through the event loop.
+ */
+template <class Session>
 class server {
 public:
-    using threads_num_type = unsigned int;
+    /// The self type
+    using self_type = server<Session>;
+
+    /// The session type
+    using session_type = Session;
+
+    /// The address type
     using address_type = boost::asio::ip::address;
+
+    /// The listening port type
     using port_type = unsigned short;
+
+    /// The duration type used by timeouts
     using duration_type = std::chrono::milliseconds;
+
+    /// The router type
     using router_type = server_session::router_type;
+
+    /// The message type
     using message_type = server_session::message_type;
 
+    /// Constructor
     server();
-    server(server const&) = delete;
-    server(server&&) = delete;
-    server& operator=(server const&) = delete;
-    server& operator=(server) = delete;
-    virtual ~server() = default;
 
-    [[nodiscard]] inline int exec();
+    /// Constructor (disallowed)
+    server(self_type const&) = delete;
 
-    inline void set_threads(threads_num_type threads);
-    [[nodiscard]] inline threads_num_type threads() const;
+    /// Constructor (disallowed)
+    server(self_type&&) = delete;
 
-    inline void set_address(const std::string& address);
-    [[nodiscard]] inline std::string address() const;
+    /// Assignment (disallowed)
+    self_type& operator=(self_type const&) = delete;
 
-    inline void set_port(port_type port);
-    [[nodiscard]] inline port_type port() const;
+    /// Assignment (disallowed)
+    self_type& operator=(self_type&&) = delete;
 
-    inline void set_recv_timeout(duration_type timeout);
-    [[nodiscard]] inline duration_type recv_timeout() const;
+    /// Destructor
+    ~server() = default;
 
-    template <class... OnRequest>
-    server& on_get(const std::string& path, OnRequest&&... actions);
+    ROUTER_DECL void set_address(const std::string& address);
+    [[nodiscard]] ROUTER_DECL std::string address() const;
 
-    template <class... OnRequest>
-    server& on_put(const std::string& path, OnRequest&&... actions);
+    ROUTER_DECL void set_port(port_type port);
+    [[nodiscard]] ROUTER_DECL port_type port() const;
 
-    template <class... OnRequest>
-    server& on_post(const std::string& path, OnRequest&&... actions);
+    ROUTER_DECL void set_recv_timeout(duration_type timeout);
+    [[nodiscard]] ROUTER_DECL duration_type recv_timeout() const;
 
     template <class... OnRequest>
-    server& on_delete(const std::string& path, OnRequest&&... actions);
+    ROUTER_DECL self_type& on_get(const std::string& path, OnRequest&&... actions);
+
+    template <class... OnRequest>
+    ROUTER_DECL self_type& on_put(const std::string& path, OnRequest&&... actions);
+
+    template <class... OnRequest>
+    ROUTER_DECL self_type& on_post(const std::string& path, OnRequest&&... actions);
+
+    template <class... OnRequest>
+    ROUTER_DECL self_type& on_delete(const std::string& path, OnRequest&&... actions);
+
+    ROUTER_DECL int exec();
 
 private:
-    std::vector<std::thread> m_threads;
-    boost::asio::io_context m_ioc;
-    boost::asio::signal_set m_sig_int_term;
     router_type m_router;
-    threads_num_type m_threads_num;
     address_type m_address;
     port_type m_port;
     duration_type m_recv_timeout;
 };
+
+using http_server = server<server_session>;
 
 } // namespace beast_router
 

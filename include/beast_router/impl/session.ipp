@@ -21,6 +21,8 @@ namespace details {
 #define SESSION_TEMPLATE_DECLARE                                        \
     template <bool IsRequest, class Body, class Buffer, class Protocol, \
         class Socket>
+#define SESSION_TEMPLATE_ATTRIBUTES \
+    IsRequest, Body, Buffer, Protocol, Socket
 
 SESSION_TEMPLATE_DECLARE
 template <class... OnAction>

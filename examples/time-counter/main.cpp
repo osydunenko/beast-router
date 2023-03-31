@@ -8,7 +8,7 @@
 
 int main(int, char**)
 {
-    return beast_router::server()
+    return beast_router::http_server()
         .on_get(R"(^.*\.(js|html|css)$)", [](const auto& rq, auto& ctx) {
             // Request path must be absolute and not contain ".."
             if (rq.target().empty() || rq.target()[0] != '/' || rq.target().find("..") != boost::beast::string_view::npos) {

@@ -4,6 +4,9 @@
     template <class Protocol, class Acceptor, class Socket, \
         template <typename> class Endpoint>
 
+#define LISTENER_TEMPLATE_ATTRIBUTES \
+    Protocol, Acceptor, Socket, Endpoint
+
 #define CHECK_EC(ec, msg)        \
     if (ec) {                    \
         if (m_on_error) {        \

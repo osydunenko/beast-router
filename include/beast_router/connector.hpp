@@ -1,17 +1,14 @@
 #pragma once
 
+#include "base/config.hpp"
+#include "base/strand_stream.hpp"
+#include "common/connection.hpp"
+#include "common/utility.hpp"
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/system/error_code.hpp>
 #include <functional>
 #include <memory>
 #include <string_view>
-
-#include "base/config.hpp"
-#include "base/strand_stream.hpp"
-#include "common/connection.hpp"
-#include "common/utility.hpp"
-
-#define CONNECTOR_TEMPLATE_ATTRIBUTES Protocol, Resolver, Socket, Endpoint
 
 namespace beast_router {
 
@@ -22,10 +19,10 @@ template <class Protocol = boost::asio::ip::tcp,
     template <typename> class Endpoint = boost::asio::ip::basic_endpoint>
 class connector : public base::strand_stream,
                   public std::enable_shared_from_this<
-                      connector<CONNECTOR_TEMPLATE_ATTRIBUTES>> {
+                      connector<Protocol, Resolver, Socket, Endpoint>> {
 public:
     /// The self type
-    using self_type = connector<CONNECTOR_TEMPLATE_ATTRIBUTES>;
+    using self_type = connector<Protocol, Resolver, Socket, Endpoint>;
 
     /// The protocol type
     using protocol_type = Protocol;
