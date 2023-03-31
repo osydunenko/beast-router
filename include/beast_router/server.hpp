@@ -9,7 +9,10 @@ namespace beast_router {
 /// Encapsulates the server handlers and client sessions
 /**
  * The common class which handles all the active sessions and
- * dispatch them through the event loop.
+ * dispatch them through the event loop. The class is associated
+ * within the following attributes:
+ *
+ * @li Session -- Session definition class as defined in session.hpp
  */
 template <class Session>
 class server {
@@ -53,27 +56,66 @@ public:
     /// Destructor
     ~server() = default;
 
+    /// Sets the address for listening on
+    /**
+     * @param address The <tt>std::string</tt> type and represents IPv4/6 address
+     * @returns void
+     */
     ROUTER_DECL void set_address(const std::string& address);
+
+    /// Returns the listening address
+    /**
+     * @returns std::string
+     */
     [[nodiscard]] ROUTER_DECL std::string address() const;
 
+    /// Sets the port for listening on
+    /**
+     * @param port The <tt>self_type::port_type</tt> type represents the port number
+     * @returns void
+     */
     ROUTER_DECL void set_port(port_type port);
+
+    /// Returns the current port number
+    /**
+     * @returns self_type::port_type
+     */
     [[nodiscard]] ROUTER_DECL port_type port() const;
 
+    /// Sets the receive timeout
+    /**
+     * @param timeout The <tt>self_type::duration_type</tt> type represents the current
+     * timeout for data receiving from the client connection
+     * @returns void
+     */
     ROUTER_DECL void set_recv_timeout(duration_type timeout);
+
+    /// Returns the current receive timeout
+    /**
+     * @returns self_type::duration_type
+     */
     [[nodiscard]] ROUTER_DECL duration_type recv_timeout() const;
 
+    /// A proxy function for the routing -- router::get
     template <class... OnRequest>
     ROUTER_DECL self_type& on_get(const std::string& path, OnRequest&&... actions);
 
+    /// A proxy function for the routing -- router::put
     template <class... OnRequest>
     ROUTER_DECL self_type& on_put(const std::string& path, OnRequest&&... actions);
 
+    /// A proxy function for the routing -- router::post
     template <class... OnRequest>
     ROUTER_DECL self_type& on_post(const std::string& path, OnRequest&&... actions);
 
+    /// A proxy function for the routing -- router::delete_
     template <class... OnRequest>
     ROUTER_DECL self_type& on_delete(const std::string& path, OnRequest&&... actions);
 
+    /// The method executes the routing configuration and starts the event loop
+    /**
+     * @returns int
+     */
     ROUTER_DECL int exec();
 
 private:

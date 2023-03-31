@@ -7,9 +7,6 @@
 namespace beast_router {
 
 /// Encapsulates the connections related functionality
-/**
- * @note The class is neither copyable nor assignment
- */
 template <class Stream, class CompletionExecutor>
 class connection
     : public base::connection<connection<Stream, CompletionExecutor>,

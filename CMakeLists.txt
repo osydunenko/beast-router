@@ -18,9 +18,9 @@ add_library(${PROJECT_NAME} INTERFACE)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 
 # Check prereqs
-find_package(Boost 1.74.0 REQUIRED COMPONENTS system thread)
-find_package(Doxygen 1.9.1)
-find_package(OpenSSL 3.0.5 COMPONENTS Crypto SSL)
+find_package(Boost REQUIRED COMPONENTS system thread)
+find_package(Doxygen)
+find_package(OpenSSL COMPONENTS Crypto SSL)
 
 find_program(CLANGFORMAT_PATH clang-format)
 

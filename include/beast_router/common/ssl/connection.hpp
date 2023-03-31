@@ -1,8 +1,7 @@
 #pragma once
 
-#include <boost/beast/ssl.hpp>
-
 #include "../../base/connection.hpp"
+#include <boost/beast/ssl.hpp>
 
 #define SSL_CONNECTION_TEMPLATE_ATTRIBUTES Stream, CompletionExecutor
 
@@ -10,9 +9,6 @@ namespace beast_router {
 namespace ssl {
 
     /// Encapsulates the ssl connection related functionality
-    /**
-     * @note The class is neither copyable nor assignment
-     */
     template <class Stream, class CompletionExecutor>
     class connection
         : public base::connection<connection<Stream, CompletionExecutor>,

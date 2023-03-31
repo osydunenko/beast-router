@@ -6,8 +6,6 @@
 #include <thread>
 #include <vector>
 
-#include <iostream>
-
 #define EVENT_LOOP \
     []() -> beast_router::event_loop& { return beast_router::event_loop::get_instance(); }()
 #define EVENT_IOC \
