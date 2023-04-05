@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/config.hpp"
 #include "base/conn_queue.hpp"
 #include "base/dispatcher.hpp"
 #include "base/lockable.hpp"
@@ -239,7 +240,7 @@ public:
         /**
          * @returns void
          */
-        void recv();
+        ROUTER_DECL void recv();
 
         /// The method receives a data send by the socket whithin the timeout
         /**
@@ -252,7 +253,8 @@ public:
 #else
         typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
 #endif
-        recv(TimeDuration&& duration);
+            ROUTER_DECL
+            recv(TimeDuration&& duration);
 
         /// The overloaded method does send data back to client
         /**
@@ -260,7 +262,7 @@ public:
          * @returns void
          */
         template <class Message>
-        void send(Message&& message) const;
+        ROUTER_DECL void send(Message&& message) const;
 
         /// The overloaded method does send data back to client within the timeout
         /**
@@ -269,27 +271,27 @@ public:
          * @returns void
          */
         template <class Message, class TimeDuration>
-        void send(Message&& message, TimeDuration&& duration) const;
+        ROUTER_DECL void send(Message&& message, TimeDuration&& duration) const;
 
         /// Obtains the state of the connection
         /**
          * @returns bool
          */
-        [[nodiscard]] bool is_open() const;
+        [[nodiscard]] ROUTER_DECL bool is_open() const;
 
         /// Obtains the user data; lvalue reference context
         /**
          * @returns Type reference
          */
         template <class Type>
-        [[nodiscard]] Type& get_user_data() &;
+        [[nodiscard]] ROUTER_DECL Type& get_user_data() &;
 
         /// Obtains the user data; rvalue reference context
         /**
          * @returns Type rvalue eference
          */
         template <class Type>
-        [[nodiscard]] Type&& get_user_data() &&;
+        [[nodiscard]] ROUTER_DECL Type&& get_user_data() &&;
 
         /// Sets user data
         /**
@@ -297,7 +299,7 @@ public:
          * @returns void
          */
         template <class Type>
-        void set_user_data(Type&& data);
+        ROUTER_DECL void set_user_data(Type&& data);
 
     protected:
         template <class Message, class TimeDuration>

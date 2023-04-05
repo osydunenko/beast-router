@@ -27,33 +27,28 @@ find_program(CLANGFORMAT_PATH clang-format)
 target_include_directories(${PROJECT_NAME}
     INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 target_link_libraries(${PROJECT_NAME}
     INTERFACE
         Boost::system
         Boost::thread
-        $<$<BOOL:${LINK_SSL}>:OpenSSL::Crypto OpenSSL::SSL>
-)
+        $<$<BOOL:${LINK_SSL}>:OpenSSL::Crypto OpenSSL::SSL>)
 
 target_compile_definitions(${PROJECT_NAME}
     INTERFACE
         $<$<BOOL:${LINK_SSL}>:LINK_SSL>
         BOOST_BEAST_USE_STD_STRING_VIEW
-        BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT
-)
+        BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
 
 target_compile_features(${PROJECT_NAME}
     INTERFACE
-        cxx_std_17
-)
+        cxx_std_17)
 
 add_library(compile_options INTERFACE)
 add_library(${PROJECT_NAME}::compile_options ALIAS compile_options)
 
-target_compile_options(
-    compile_options
+target_compile_options(compile_options
     INTERFACE
         -Werror
         -Wextra
@@ -64,13 +59,11 @@ target_compile_options(
             -fno-optimize-sibling-calls
             -fsanitize-address-use-after-scope
             -fno-omit-frame-pointer>
-        $<$<CXX_COMPILER_ID:Clang>:-stdlib=libc++>
-)
+        $<$<CXX_COMPILER_ID:Clang>:-stdlib=libc++>)
 
 target_link_libraries(compile_options
     INTERFACE
-        $<$<BOOL:${LINK_ASAN}>:-fsanitize=address>
-)
+        $<$<BOOL:${LINK_ASAN}>:-fsanitize=address>)
 
 if (ROUTER_DOXYGEN)
     if (NOT DOXYGEN_FOUND)
@@ -88,13 +81,11 @@ if (ROUTER_DOXYGEN)
     configure_file(${DOXYGEN_IN} ${DOXYGEN_OUT} @ONLY NEWLINE_STYLE UNIX)
 
     # Decl. doc target
-    add_custom_target(
-        doc
+    add_custom_target(doc
         COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYGEN_OUT}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/beast_router/
         COMMENT "Generating API Documentation..."
-        VERBATIM
-    )
+        VERBATIM)
 endif()
 
 # Decl. clang-format target
@@ -105,19 +96,18 @@ add_custom_target(${PROJECT_NAME}_clangformat
     COMMAND ${CLANGFORMAT_PATH} -i --style=WebKit ${SRCS} ${EX_SRCS} ${TST_SRCS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
     COMMENT "Fomatting the code with ${CLANGFORMAT_PATH}..."
-    VERBATIM
-)
+    VERBATIM)
 
 add_custom_target(debug
     COMMAND ${CMAKE_COMMAND} -DROUTER_DOXYGEN=ON
         -DBUILD_EXAMPLES=ON
         -DBUILD_TESTS=ON
         -DLINK_ASAN=ON
+        -DLINK_SSL=ON
         -DCMAKE_BUILD_TYPE=Debug
         ${PROJECT_SOURCE_DIR}
     COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}
-    VERBATIM
-)
+    VERBATIM)
 
 # Exclude the clangformat targets from all
 set_target_properties(${PROJECT_NAME}_clangformat PROPERTIES EXLCLUDE_FROM_ALL TRUE)

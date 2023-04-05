@@ -249,7 +249,7 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::context(Impl& impl)
 
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv()
+ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv()
 {
     assert(m_impl != nullptr);
     boost::asio::dispatch(static_cast<base::strand_stream>(*m_impl),
@@ -260,7 +260,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv()
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
 template <class TimeDuration>
-typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
+ROUTER_DECL typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
 session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(
     TimeDuration&& duration)
 {
@@ -276,7 +276,7 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
 template <class Message>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(
+ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(
     Message&& message) const
 {
     do_send(std::forward<Message>(message), timer_duration_type::max());
@@ -285,7 +285,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
 template <class Message, class TimeDuration>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(
+ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(
     Message&& message, TimeDuration&& duration) const
 {
     do_send(std::forward<Message>(message), std::forward<TimeDuration>(duration));
@@ -293,7 +293,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(
 
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
-bool session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::is_open() const
+ROUTER_DECL bool session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::is_open() const
 {
     assert(m_impl != nullptr);
     return m_impl->m_connection.is_open();
@@ -302,7 +302,7 @@ bool session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::is_open() const
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
 template <class Type>
-Type& session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_user_data() &
+ROUTER_DECL Type& session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_user_data() &
 {
     return std::any_cast<Type&>(m_user_data);
 }
@@ -310,7 +310,7 @@ Type& session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_user_data() &
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
 template <class Type>
-Type&& session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_user_data() &&
+ROUTER_DECL Type&& session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_user_data() &&
 {
     return std::any_cast<Type&&>(std::move(m_user_data));
 }
@@ -318,7 +318,7 @@ Type&& session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_user_data() &&
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
 template <class Type>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::set_user_data(
+ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::set_user_data(
     Type&& data)
 {
     m_user_data = std::make_any<Type>(std::forward<Type>(data));

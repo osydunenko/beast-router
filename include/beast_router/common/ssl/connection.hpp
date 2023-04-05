@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../base/connection.hpp"
-#include <boost/beast/ssl.hpp>
+#include <boost/asio/ssl.hpp>
 
 #define SSL_CONNECTION_TEMPLATE_ATTRIBUTES Stream, CompletionExecutor
 
@@ -18,10 +18,7 @@ namespace ssl {
         using self_type = connection<SSL_CONNECTION_TEMPLATE_ATTRIBUTES>;
 
         /// The stream type
-        using stream_type = Stream;
-
-        /// The SSL stream type
-        using ssl_stream_type = boost::beast::ssl_stream<stream_type>;
+        using stream_type = boost::asio::ssl::stream<Stream>;
 
         /// The shutdown type
         using shutdown_type = typename stream_type::shutdown_type;
