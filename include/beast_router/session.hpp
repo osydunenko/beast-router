@@ -253,8 +253,8 @@ public:
 #else
         typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
 #endif
-            ROUTER_DECL
-            recv(TimeDuration&& duration);
+        ROUTER_DECL
+        recv(TimeDuration&& duration);
 
         /// The overloaded method does send data back to client
         /**
@@ -300,6 +300,12 @@ public:
          */
         template <class Type>
         ROUTER_DECL void set_user_data(Type&& data);
+
+        /// Obtains the current associated stream
+        /**
+         * @returns Reference of `connection_type::stream_type`
+         */
+        ROUTER_DECL typename connection_type::stream_type& get_stream();
 
     protected:
         template <class Message, class TimeDuration>

@@ -326,6 +326,14 @@ ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::set_user_d
 
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
+ROUTER_DECL typename session<SESSION_TEMPLATE_ATTRIBUTES>::connection_type::stream_type& 
+session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_stream()
+{
+    return m_impl->m_connection.stream();
+}
+
+SESSION_TEMPLATE_DECLARE
+template <class Impl>
 template <class Message, class TimeDuration>
 void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::do_send(
     Message&& message, TimeDuration&& duration) const
