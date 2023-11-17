@@ -63,7 +63,7 @@ namespace base {
     protected:
         void do_handle()
         {
-            assert(m_items.size());
+            BOOST_ASSERT(m_items.size());
             (*m_items.front())();
         }
 

@@ -22,7 +22,7 @@ template <class Session>
 ROUTER_DECL typename router<Session>::mutex_pointer_type
 router<Session>::get_mutex_pointer() const
 {
-    assert(m_mutex);
+    BOOST_ASSERT(m_mutex);
     return m_mutex;
 }
 
@@ -30,7 +30,7 @@ template <class Session>
 ROUTER_DECL typename router<Session>::method_const_map_pointer
 router<Session>::get_resource_map() const
 {
-    assert(m_method_map);
+    BOOST_ASSERT(m_method_map);
     return m_method_map;
 }
 
@@ -40,7 +40,7 @@ void router<Session>::add_resource(const std::string& path,
     storage_type&& storage)
 {
     LOCKABLE_ENTER_TO_WRITE(get_mutex());
-    assert(m_method_map);
+    BOOST_ASSERT(m_method_map);
 
     auto& resource_map = m_method_map->insert({ method, resource_map_type() }).first->second;
     resource_map.insert_or_assign(path, std::move(storage));

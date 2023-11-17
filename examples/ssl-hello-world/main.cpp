@@ -7,7 +7,7 @@
 static std::atomic<uint64_t> counter { 0 };
 
 /// SSL Context
-//boost::asio::ssl::context ctx { boost::asio::ssl::context::tlsv12 };
+// boost::asio::ssl::context ctx { boost::asio::ssl::context::tlsv12 };
 
 static const std::string_view crt {
     "-----BEGIN CERTIFICATE-----\n"

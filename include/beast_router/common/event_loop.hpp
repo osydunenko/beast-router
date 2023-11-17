@@ -6,32 +6,32 @@
 #include <thread>
 #include <vector>
 
-#define EVENT_LOOP \
-    []() -> beast_router::event_loop& { return beast_router::event_loop::get_instance(); }()
-#define EVENT_IOC \
-    static_cast<boost::asio::io_context&>(beast_router::event_loop::get_instance())
-
 namespace beast_router {
 
 class event_loop {
 public:
     using threads_num_type = unsigned int;
+    using event_loop_ptr_type = std::shared_ptr<event_loop>;
 
     event_loop(const event_loop&) = delete;
-    event_loop(event_loop&&) = delete;
+    event_loop(event_loop&& other) = delete;
     event_loop& operator=(const event_loop&) = delete;
-    event_loop& operator=(event_loop) = delete;
+    event_loop& operator=(event_loop rhs) = delete;
     ~event_loop() = default;
+
+    ROUTER_DECL int exec();
+    ROUTER_DECL threads_num_type get_threads() const;
+    ROUTER_DECL void stop();
+    ROUTER_DECL bool is_running() const;
 
     ROUTER_DECL operator boost::asio::io_context&() { return m_ioc; }
 
-    ROUTER_DECL int exec();
-
-    static event_loop& get_instance();
+    template <class... Args>
+    static ROUTER_DECL auto create(Args&&... args)
+        -> decltype(event_loop { std::declval<Args>()... }, event_loop_ptr_type());
 
 protected:
-    event_loop();
-
+    event_loop(threads_num_type threads = 1);
     ROUTER_DECL void set_threads(threads_num_type threads);
 
 private:

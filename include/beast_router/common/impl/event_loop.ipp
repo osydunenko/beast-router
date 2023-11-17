@@ -1,11 +1,11 @@
 #pragma once
 
+#include <memory>
+
 namespace beast_router {
 
-static const event_loop::threads_num_type num_thrs { std::thread::hardware_concurrency() };
-
-event_loop::event_loop()
-    : m_threads_num { num_thrs }
+event_loop::event_loop(threads_num_type threads)
+    : m_threads_num { threads }
     , m_threads {}
     , m_ioc {}
     , m_sig_int_term { m_ioc, SIGINT, SIGTERM }
@@ -17,17 +17,38 @@ ROUTER_DECL void event_loop::set_threads(threads_num_type threads)
     m_threads_num = threads;
 }
 
+ROUTER_DECL event_loop::threads_num_type
+event_loop::get_threads() const
+{
+    return m_threads_num;
+}
+
+ROUTER_DECL void event_loop::stop()
+{
+    m_ioc.stop();
+
+    for (auto& thread : m_threads) {
+        thread.join();
+    }
+}
+
+ROUTER_DECL bool event_loop::is_running() const
+{
+    return not m_ioc.stopped();
+}
+
 ROUTER_DECL int event_loop::exec()
 {
     int ret_code = boost::system::errc::success;
+
     m_sig_int_term.async_wait([this, &ret_code](const boost::system::error_code& ec, int) {
         ret_code = ec.value();
-        EVENT_IOC.stop();
+        m_ioc.stop();
     });
 
     for (decltype(m_threads_num) cnt = 0; cnt < m_threads_num; ++cnt) {
         m_threads.emplace_back([this]() {
-            EVENT_IOC.run();
+            m_ioc.run();
         });
     }
 
@@ -38,10 +59,18 @@ ROUTER_DECL int event_loop::exec()
     return ret_code;
 }
 
-event_loop& event_loop::get_instance()
+template <class... Args>
+ROUTER_DECL auto event_loop::create(Args&&... args)
+    -> decltype(event_loop { std::declval<Args>()... }, event_loop_ptr_type())
 {
-    static event_loop el {};
-    return el;
+    struct enable_make_shared : public event_loop {
+        enable_make_shared(Args&&... args)
+            : event_loop { std::forward<Args>(args)... }
+        {
+        }
+    };
+
+    return std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
 }
 
 } // namespace beast_router

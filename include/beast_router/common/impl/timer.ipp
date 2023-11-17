@@ -15,7 +15,7 @@ TIMER_TEMPLATE_DECLARE
 std::size_t timer<TIMER_TEMPLATE_ATTRIBUTES>::expires_from_now(
     const duration_type& expire_time)
 {
-    return m_timer.expires_from_now(expire_time);
+    return m_timer.expires_after(expire_time);
 }
 
 TIMER_TEMPLATE_DECLARE

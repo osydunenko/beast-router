@@ -9,7 +9,7 @@
 int main(int, char**)
 {
     return beast_router::http_server()
-        .on_get(R"(^.*\.(js|html|css)$)", [](const auto& rq, auto& ctx) {
+        .on<beast_router::http_server::get_t>(R"(^.*\.(js|html|css)$)", [](const auto& rq, auto& ctx) {
             // Request path must be absolute and not contain ".."
             if (rq.target().empty() || rq.target()[0] != '/' || rq.target().find("..") != boost::beast::string_view::npos) {
                 // Send bad request
@@ -31,10 +31,10 @@ int main(int, char**)
 
             return ctx.send(std::move(rp));
         })
-        .on_get(R"(^/$)", [](const auto& rq, auto& ctx) {
+        .on<beast_router::http_server::get_t>(R"(^/$)", [](const auto& rq, auto& ctx) {
             ctx.send(beast_router::make_moved_response(rq.version(), "/index.html"));
         })
-        .on_get(R"(^/update$)", [](const auto& rq, auto& ctx) {
+        .on<beast_router::http_server::get_t>(R"(^/update$)", [](const auto& rq, auto& ctx) {
             auto now = std::chrono::system_clock::now();
             auto itt = std::chrono::system_clock::to_time_t(now);
 

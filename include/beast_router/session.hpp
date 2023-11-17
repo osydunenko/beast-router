@@ -41,7 +41,7 @@ template <bool IsRequest, class Body = boost::beast::http::string_body,
     class Buffer = boost::beast::flat_buffer,
     class Protocol = boost::asio::ip::tcp,
     class Socket = boost::asio::basic_stream_socket<Protocol>>
-class session {
+class session final {
     class impl;
 
 public:
@@ -253,8 +253,9 @@ public:
 #else
         typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
 #endif
-        ROUTER_DECL
-        recv(TimeDuration&& duration);
+
+            ROUTER_DECL
+            recv(TimeDuration&& duration);
 
         /// The overloaded method does send data back to client
         /**

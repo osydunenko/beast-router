@@ -52,6 +52,9 @@ public:
     /// The self type
     using self_type = listener<Protocol, Acceptor, Socket, Endpoint>;
 
+    /// The listener pointer type
+    using listener_ptr_type = std::shared_ptr<self_type>;
+
     /// The protocol type associated with the endpoint
     using protocol_type = Protocol;
 
@@ -70,13 +73,6 @@ public:
     /// The on error callback type
     using on_error_type = std::function<void(boost::system::error_code, std::string_view)>;
 
-    /// Constructor
-    explicit listener(boost::asio::io_context& ctx, on_accept_type&& on_accept);
-
-    /// Constructor
-    explicit listener(boost::asio::io_context& ctx, on_accept_type&& on_accept,
-        on_error_type&& on_error);
-
     /// The factory method which creates `self_type` and starts listening and
     /// accepts new connections
     /**
@@ -89,23 +85,37 @@ public:
      * `on_accept`, `on_error` signatures
      * @returns void
      */
-    template <
-        class... OnAction,
-#if not ROUTER_DOXYGEN
-        std::enable_if_t<utility::is_class_creatable_v<
-                             self_type, boost::asio::io_context&, OnAction...>,
-            bool>
-        = true
-#endif
-        >
-    static void launch(boost::asio::io_context& ctx,
+    template <class... OnAction>
+    static auto launch(boost::asio::io_context& ctx,
         const endpoint_type& endpoint, OnAction&&... on_action)
+        -> decltype(self_type { ctx, std::declval<OnAction>()... }, listener_ptr_type())
     {
-        std::make_shared<self_type>(ctx, std::forward<OnAction>(on_action)...)
-            ->loop(endpoint);
+        struct enable_make_shared : public self_type {
+            enable_make_shared(boost::asio::io_context& ctx, OnAction&&... on_actions)
+                : self_type { ctx, std::forward<OnAction>(on_actions)... }
+            {
+            }
+        };
+
+        auto lstnr = std::make_shared<enable_make_shared>(ctx, std::forward<OnAction>(on_action)...);
+        lstnr->loop(endpoint);
+        return lstnr;
+    }
+
+    ROUTER_DECL void stop_listen()
+    {
+        m_acceptor.release();
+        m_acceptor.stop();
     }
 
 protected:
+    /// Constructor
+    explicit listener(boost::asio::io_context& ctx, on_accept_type&& on_accept);
+
+    /// Constructor
+    explicit listener(boost::asio::io_context& ctx, on_accept_type&& on_accept,
+        on_error_type&& on_error);
+
     /// Starts a loop on the given endpoint
     /**
      * @param endpoint

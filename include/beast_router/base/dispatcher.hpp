@@ -51,7 +51,7 @@ namespace base {
                     std::is_same_v<MessageBody, typename session_type::body_type>>,
                 "dispatcher::do_process_request requirements are not met");
 
-            assert(m_method_map);
+            BOOST_ASSERT(m_method_map);
 
             LOCKABLE_ENTER_TO_READ(m_mutex);
 
@@ -101,7 +101,7 @@ namespace base {
                     std::is_same_v<MessageBody, typename session_type::body_type>>,
                 "dispatcher::do_process_request requirements are not met");
 
-            assert(m_method_map);
+            BOOST_ASSERT(m_method_map);
 
             LOCKABLE_ENTER_TO_READ(m_mutex);
 

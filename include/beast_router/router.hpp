@@ -78,17 +78,17 @@ public:
     /// Constructor
     router();
 
-    /// Constructor (disallowed)
-    router(const router&) = delete;
+    /// Constructor (default)
+    router(const router&) = default;
 
-    /// Assignment (disallowed)
-    self_type& operator=(const router&) = delete;
+    /// Assignment (default)
+    self_type& operator=(const router&) = default;
 
-    /// Constructor (disallowed)
-    router(router&&) = delete;
+    /// Constructor (default)
+    router(router&&) = default;
 
-    /// Assignment (disallowed)
-    self_type& operator=(router&&) = delete;
+    /// Assignment (default)
+    self_type& operator=(router&&) = default;
 
     /// Destructor
     ~router() = default;

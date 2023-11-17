@@ -29,10 +29,6 @@
 #define ROUTER_DECL inline
 #endif
 
-#if not defined(BOOST_BEAST_USE_STD_STRING_VIEW)
-#define BOOST_BEAST_USE_STD_STRING_VIEW
-#endif
-
 #if LINK_SSL
 #define SSL
 #endif

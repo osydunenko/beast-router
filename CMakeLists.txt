@@ -38,7 +38,7 @@ target_link_libraries(${PROJECT_NAME}
 target_compile_definitions(${PROJECT_NAME}
     INTERFACE
         $<$<BOOL:${LINK_SSL}>:LINK_SSL>
-        BOOST_BEAST_USE_STD_STRING_VIEW
+        BOOST_ASIO_NO_DEPRECATED
         BOOST_ASIO_USE_TS_EXECUTOR_AS_DEFAULT)
 
 target_compile_features(${PROJECT_NAME}

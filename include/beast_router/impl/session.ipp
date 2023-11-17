@@ -244,14 +244,14 @@ template <class Impl>
 session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::context(Impl& impl)
     : m_impl { impl.shared_from_this() }
 {
-    assert(m_impl != nullptr);
+    BOOST_ASSERT(m_impl != nullptr);
 }
 
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
 ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv()
 {
-    assert(m_impl != nullptr);
+    BOOST_ASSERT(m_impl != nullptr);
     boost::asio::dispatch(static_cast<base::strand_stream>(*m_impl),
         std::bind(static_cast<Impl& (Impl::*)()>(&Impl::recv),
             m_impl->shared_from_this()));
@@ -264,7 +264,7 @@ ROUTER_DECL typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration
 session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(
     TimeDuration&& duration)
 {
-    assert(m_impl != nullptr);
+    BOOST_ASSERT(m_impl != nullptr);
     boost::asio::dispatch(
         static_cast<base::strand_stream>(*m_impl),
         std::bind(static_cast<Impl& (Impl::*)(timer_duration_type)>(&Impl::recv),
@@ -295,7 +295,7 @@ SESSION_TEMPLATE_DECLARE
 template <class Impl>
 ROUTER_DECL bool session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::is_open() const
 {
-    assert(m_impl != nullptr);
+    BOOST_ASSERT(m_impl != nullptr);
     return m_impl->m_connection.is_open();
 }
 
@@ -326,7 +326,7 @@ ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::set_user_d
 
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
-ROUTER_DECL typename session<SESSION_TEMPLATE_ATTRIBUTES>::connection_type::stream_type& 
+ROUTER_DECL typename session<SESSION_TEMPLATE_ATTRIBUTES>::connection_type::stream_type&
 session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_stream()
 {
     return m_impl->m_connection.stream();
@@ -341,7 +341,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::do_send(
     static_assert(utility::is_chrono_duration_v<TimeDuration>,
         "TimeDuration requirements are not met");
 
-    assert(m_impl != nullptr);
+    BOOST_ASSERT(m_impl != nullptr);
 
     auto callback = [msg = std::forward<Message>(message),
                         dur = std::forward<TimeDuration>(duration),

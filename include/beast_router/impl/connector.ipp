@@ -70,7 +70,7 @@ void connector<CONNECTOR_TEMPLATE_ATTRIBUTES>::on_connect(
     boost::beast::error_code ec,
     [[maybe_unused]] typename results_type::endpoint_type ep)
 {
-    assert(m_on_connect != nullptr);
+    BOOST_ASSERT(m_on_connect != nullptr);
 
     if (ec) {
         if (m_on_error) {
