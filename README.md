@@ -2,12 +2,14 @@
 
 ## Contents
 
-- [Synopsis](#synopsis)
-- [Dependencies](#dependencies)
-- [Documentation](#documentation)
-- [Building](#building)
-- [Usage](#usage)
-- [Limitations](#limitations)
+- [Beast Router](#beast-router)
+	- [Contents](#contents)
+	- [Synopsis](#synopsis)
+	- [Dependencies](#dependencies)
+	- [Documentation](#documentation)
+	- [Building](#building)
+	- [Usage](#usage)
+	- [Limitations](#limitations)
 
 <div id="synopsis" />
 
@@ -26,7 +28,7 @@ The library is designed for:
 <div id="dependencies" />
 
 ## Dependencies
-- Boost Libraries >= 1.74.0 as sys. dependency
+- Boost Libraries >= 1.82.0 as sys. dependency
 	- Boost.System
 	- Boost.Thread
 	- Boost unit testing

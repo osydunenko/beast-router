@@ -98,6 +98,12 @@ struct server final {
     ROUTER_DECL duration_type receive_timeout() const { return m_recv_timeout; }
 
     /// A proxy function for the routing
+    /**
+     * The method isassociated within the following attributes: 
+     *
+     * @li Tag - specifies the method to be used, i.e., `get_t`, `put_t`, `post_t`, `delete_t`
+     * @li `template<class ...OnRequest>` carries the list of executables routines
+     */
     template <class Tag, class... OnRequest>
     ROUTER_DECL self_type& on(const std::string& path, OnRequest&&... actions);
 
