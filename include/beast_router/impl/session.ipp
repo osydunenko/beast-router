@@ -1,20 +1,20 @@
 #pragma once
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 namespace details {
 
-    template <bool IsRequest, class Body>
-    struct serializer;
+template <bool IsRequest, class Body>
+struct serializer;
 
-    template <class Body>
-    struct serializer<true, Body> {
-        using type = boost::beast::http::request_serializer<Body>;
-    };
+template <class Body>
+struct serializer<true, Body> {
+    using type = boost::beast::http::request_serializer<Body>;
+};
 
-    template <class Body>
-    struct serializer<false, Body> {
-        using type = boost::beast::http::response_serializer<Body>;
-    };
+template <class Body>
+struct serializer<false, Body> {
+    using type = boost::beast::http::response_serializer<Body>;
+};
 
 } // namespace details
 
@@ -65,6 +65,22 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::send(socket_type&& socket,
     ctx.send(std::forward<Request>(request));
     return ctx;
 }
+
+/*SESSION_TEMPLATE_DECLARE
+template <class Request, class TimeDuration, class... OnAction>
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
+session<SESSION_TEMPLATE_ATTRIBUTES>::send(socket_type&& socket,
+    Request&& request,
+    const router_type& router,
+    TimeDuration&& duration,
+    OnAction&&... on_action)
+{
+    static_assert(!IsRequest, "session::send requirements are not met");
+    context_type ctx = init_context(std::move(socket), router,
+        std::forward<OnAction>(on_action)...);
+    ctx.send(std::forward<Request>(request), std::forward<TimeDuration>(duration));
+    return ctx;
+}*/
 
 SESSION_TEMPLATE_DECLARE
 template <class... OnAction>
@@ -354,4 +370,4 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::do_send(
         std::move(callback));
 }
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()

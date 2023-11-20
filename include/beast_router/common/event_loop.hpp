@@ -6,9 +6,14 @@
 #include <thread>
 #include <vector>
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
-class event_loop {
+class event_loop : public std::enable_shared_from_this<event_loop> {
+    template <class, class, class, template <typename> class>
+    friend class listener;
+    template <class, class, class, template <typename> class>
+    friend class connector;
+
 public:
     using threads_num_type = unsigned int;
     using event_loop_ptr_type = std::shared_ptr<event_loop>;
@@ -24,15 +29,14 @@ public:
     ROUTER_DECL void stop();
     ROUTER_DECL bool is_running() const;
 
-    ROUTER_DECL operator boost::asio::io_context&() { return m_ioc; }
-
     template <class... Args>
     static ROUTER_DECL auto create(Args&&... args)
         -> decltype(event_loop { std::declval<Args>()... }, event_loop_ptr_type());
 
 protected:
-    event_loop(threads_num_type threads = 1);
+    event_loop(threads_num_type threads = 0u);
     ROUTER_DECL void set_threads(threads_num_type threads);
+    ROUTER_DECL operator boost::asio::io_context&() { return m_ioc; }
 
 private:
     threads_num_type m_threads_num;
@@ -41,6 +45,6 @@ private:
     boost::asio::signal_set m_sig_int_term;
 };
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()
 
 #include "impl/event_loop.ipp"

@@ -107,6 +107,7 @@ add_custom_target(debug
         -DCMAKE_BUILD_TYPE=Debug
         ${PROJECT_SOURCE_DIR}
     COMMAND ${CMAKE_COMMAND} --build ${PROJECT_BINARY_DIR}
+    USES_TERMINAL
     VERBATIM)
 
 # Exclude the clangformat targets from all

@@ -7,7 +7,7 @@
 #define CONNECTOR_TEMPLATE_ATTRIBUTES \
     Protocol, Resolver, Socket, Endpoint
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 CONNECTOR_TEMPLATE_DECLARE
 connector<CONNECTOR_TEMPLATE_ATTRIBUTES>::connector(
@@ -82,4 +82,4 @@ void connector<CONNECTOR_TEMPLATE_ATTRIBUTES>::on_connect(
     m_on_connect(m_connection.release());
 }
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()

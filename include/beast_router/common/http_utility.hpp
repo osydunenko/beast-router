@@ -8,7 +8,7 @@
 #include <string_view>
 #include <tuple>
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 namespace http = boost::beast::http;
 
@@ -34,66 +34,66 @@ using http_empty_request = beast_http_request<http::empty_body>;
 
 namespace details {
 
-    template <bool IsRequest, class Body>
-    struct message_creator {
-        using return_type = std::conditional_t<IsRequest, http::request<Body>, http::response<Body>>;
+template <bool IsRequest, class Body>
+struct message_creator {
+    using return_type = std::conditional_t<IsRequest, http::request<Body>, http::response<Body>>;
 
-        template <class... Args>
-        static return_type create(http::status code, unsigned version,
-            Args&&... args)
-        {
-            return return_type { std::piecewise_construct,
-                std::forward_as_tuple(std::forward<Args>(args)...),
-                std::forward_as_tuple(code, version) };
-        }
+    template <class... Args>
+    static return_type create(http::status code, unsigned version,
+        Args&&... args)
+    {
+        return return_type { std::piecewise_construct,
+            std::forward_as_tuple(std::forward<Args>(args)...),
+            std::forward_as_tuple(code, version) };
+    }
 
-        static return_type create(boost::beast::http::verb verb, unsigned version,
-            std::string_view target)
-        {
-            return return_type { verb, target, version };
-        }
-    };
+    static return_type create(boost::beast::http::verb verb, unsigned version,
+        std::string_view target)
+    {
+        return return_type { verb, target, version };
+    }
+};
 
-    template <bool IsRequest>
-    struct message_creator<IsRequest, http::empty_body> {
-        using return_type = std::conditional_t<IsRequest, http::request<http::empty_body>,
-            http::response<http::empty_body>>;
+template <bool IsRequest>
+struct message_creator<IsRequest, http::empty_body> {
+    using return_type = std::conditional_t<IsRequest, http::request<http::empty_body>,
+        http::response<http::empty_body>>;
 
-        static return_type create(http::status code, unsigned version)
-        {
-            return return_type { code, version };
-        }
+    static return_type create(http::status code, unsigned version)
+    {
+        return return_type { code, version };
+    }
 
-        static return_type create(boost::beast::http::verb verb, unsigned version,
-            std::string_view target)
-        {
-            return return_type { verb, target, version };
-        }
-    };
+    static return_type create(boost::beast::http::verb verb, unsigned version,
+        std::string_view target)
+    {
+        return return_type { verb, target, version };
+    }
+};
 
 } // namespace details
 
 namespace mime_type {
 
-    /// Mime types container type
-    using container_type = std::map<std::string_view, std::string_view>;
+/// Mime types container type
+using container_type = std::map<std::string_view, std::string_view>;
 
-    /// Default mime type
-    static constexpr std::string_view default_mime = "application/type";
+/// Default mime type
+static constexpr std::string_view default_mime = "application/type";
 
-    /// Mime types list
-    static const container_type mime_types {
-        { "html", "text/html" }, { "js", "application/javascript" },
-        { "css", "text/css" }, { "png", "image/png" },
-        { "jpg", "image/jpeg" }, { "fvl", "video/x-flv" }
-    };
+/// Mime types list
+static const container_type mime_types {
+    { "html", "text/html" }, { "js", "application/javascript" },
+    { "css", "text/css" }, { "png", "image/png" },
+    { "jpg", "image/jpeg" }, { "fvl", "video/x-flv" }
+};
 
-    /// Returns a mime type by the given extension
-    /**
-     * @param ext An extension for a type to be returned
-     * @returns mime type
-     */
-    static std::string_view get_mime_type(std::string_view ext);
+/// Returns a mime type by the given extension
+/**
+ * @param ext An extension for a type to be returned
+ * @returns mime type
+ */
+static std::string_view get_mime_type(std::string_view ext);
 
 } // namespace mime_type
 
@@ -184,6 +184,6 @@ static http_empty_request make_empty_request(boost::beast::http::verb verb,
     Version version,
     std::string_view target);
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()
 
 #include "impl/http_utility.ipp"

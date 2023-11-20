@@ -5,7 +5,7 @@
 
 #define TIMER_TEMPLATE_ATTRIBUTES CompletionExecutor, Timer
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 using namespace std::chrono_literals;
 
@@ -81,6 +81,6 @@ private:
     asio_timer_type m_timer;
 };
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()
 
 #include "impl/timer.ipp"

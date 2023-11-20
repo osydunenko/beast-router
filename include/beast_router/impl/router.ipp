@@ -1,6 +1,6 @@
 #pragma once
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 template <class Session>
 router<Session>::router()
@@ -46,4 +46,12 @@ void router<Session>::add_resource(const std::string& path,
     resource_map.insert_or_assign(path, std::move(storage));
 }
 
-} // namespace beast_router
+template <class Session>
+void swap(router<Session>& first, router<Session>& second) noexcept
+{
+    using std::swap;
+    swap(first.m_method_map, second.m_method_map);
+    swap(first.m_mutex, second.m_mutex);
+}
+
+ROUTER_NAMESPACE_END()

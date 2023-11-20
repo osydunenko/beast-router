@@ -2,7 +2,7 @@
 
 #include <memory>
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 event_loop::event_loop(threads_num_type threads)
     : m_threads_num { threads }
@@ -46,14 +46,18 @@ ROUTER_DECL int event_loop::exec()
         m_ioc.stop();
     });
 
-    for (decltype(m_threads_num) cnt = 0; cnt < m_threads_num; ++cnt) {
-        m_threads.emplace_back([this]() {
-            m_ioc.run();
-        });
-    }
+    if (m_threads_num == 0) {
+        m_ioc.run();
+    } else {
+        for (decltype(m_threads_num) cnt = 0; cnt < m_threads_num; ++cnt) {
+            m_threads.emplace_back([this]() {
+                m_ioc.run();
+            });
+        }
 
-    for (auto& thread : m_threads) {
-        thread.join();
+        for (auto& thread : m_threads) {
+            thread.join();
+        }
     }
 
     return ret_code;
@@ -73,4 +77,4 @@ ROUTER_DECL auto event_loop::create(Args&&... args)
     return std::make_shared<enable_make_shared>(std::forward<Args>(args)...);
 }
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()

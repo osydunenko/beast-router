@@ -21,7 +21,7 @@
 #include <string_view>
 #include <type_traits>
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 /// Encapsulates the sessions handling associated with a buffer
 /**
@@ -156,6 +156,21 @@ public:
     static context_type send(socket_type&& socket, Request&& request,
         const router_type& router, OnAction&&... on_action);
 
+    /// The method for sending data
+    /**
+     * The method does send data by the using the corresponding socket
+     *
+     * @param socket An rvalue reference to the socket
+     * @param request The request message to be sent
+     * @param router A const reference to the router
+     * @param duration A duration for handling the timeout
+     * @param on_action A list of callbacks
+     * @returns context_type
+     */
+    /*template <class Request, class TimeDuration, class... OnAction>
+    static context_type send(socket_type&& socket, Request&& request,
+        const router_type& router, TimeDuration&& duration, OnAction&&... on_action);*/
+
 private:
     template <class... OnAction>
     static context_type init_context(socket_type&& socket,
@@ -253,7 +268,6 @@ public:
 #else
         typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
 #endif
-
             ROUTER_DECL
             recv(TimeDuration&& duration);
 
@@ -324,6 +338,6 @@ using server_session = session<true>;
 /// Default http client sessionl
 using client_session = session<false>;
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()
 
 #include "impl/session.ipp"

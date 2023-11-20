@@ -3,7 +3,7 @@
 #define CONNECTION_TEMPLATE_DECLARE \
     template <class Stream, class CompletionExecutor>
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 CONNECTION_TEMPLATE_DECLARE
 connection<CONNECTION_TEMPLATE_ATTRIBUTES>::connection(
@@ -63,4 +63,4 @@ connection<CONNECTION_TEMPLATE_ATTRIBUTES>::stream()
     return m_stream;
 }
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()

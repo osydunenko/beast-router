@@ -2,7 +2,7 @@
 
 #define TIMER_TEMPLATE_DECLARE template <class CompletionExecutor, class Timer>
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 TIMER_TEMPLATE_DECLARE
 timer<TIMER_TEMPLATE_ATTRIBUTES>::timer(const CompletionExecutor& executor)
@@ -47,4 +47,4 @@ void timer<TIMER_TEMPLATE_ATTRIBUTES>::async_wait(Function&& func)
         boost::asio::bind_executor(m_executor, std::forward<Function>(func)));
 }
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()

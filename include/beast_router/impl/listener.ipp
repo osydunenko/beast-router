@@ -15,7 +15,7 @@
         return;                  \
     }
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 LISTENER_TEMPLATE_DECLARE
 listener<LISTENER_TEMPLATE_ATTRIBUTES>::listener(boost::asio::io_context& ctx,
@@ -89,4 +89,4 @@ void listener<LISTENER_TEMPLATE_ATTRIBUTES>::on_spawn_connect(
     m_on_accept(std::move(socket));
 }
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()

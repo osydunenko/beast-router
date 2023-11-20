@@ -10,7 +10,7 @@
 #include <memory>
 #include <string_view>
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 /// Makes a client connection to the given host
 template <class Protocol = boost::asio::ip::tcp,
@@ -45,13 +45,23 @@ public:
     /// The results type
     using results_type = typename resolver_type::results_type;
 
-    /// Constructor
-    explicit connector(boost::asio::io_context& ctx,
-        on_connect_type&& on_connect);
+    /// The connector ptr type
+    using connector_ptr_type = std::shared_ptr<self_type>;
 
-    /// Constructor
-    explicit connector(boost::asio::io_context& ctx, on_connect_type&& on_connect,
-        on_error_type&& on_error);
+    /// Constructor (disallowed)
+    connector(const connector& srv) = delete;
+
+    /// Assignment (disallowed)
+    self_type& operator=(const connector&) = delete;
+
+    /// Constructor (disallowed)
+    connector(connector&&) = delete;
+
+    /// Assignment (disallowed)
+    self_type& operator=(connector) = delete;
+
+    /// Destructor
+    ~connector() = default;
 
     /// The connection factory method
     /**
@@ -60,25 +70,33 @@ public:
      * @param port String representation of the target port
      * @param on_action A pack of callbacks suitable for the `this` object
      * creation
-     * @returns void
+     * @returns `self_type::connector_ptr_type`
      */
-    template <
-        class... OnAction,
-#if not ROUTER_DOXYGEN
-        std::enable_if_t<utility::is_class_creatable_v<
-                             self_type, boost::asio::io_context&, OnAction...>,
-            bool>
-        = true
-#endif
-        >
-    static void connect(boost::asio::io_context& ctx, std::string_view address,
-        std::string_view port, OnAction&&... on_action)
+    template <class EventLoop, class... OnAction>
+    static auto connect(EventLoop& event_loop,
+        std::string_view address, std::string_view port, OnAction&&... on_action)
+        -> decltype(self_type { static_cast<boost::asio::io_context&>(event_loop), std::declval<OnAction>()... }, connector_ptr_type())
     {
-        std::make_shared<self_type>(ctx, std::forward<OnAction>(on_action)...)
-            ->do_resolve(address, port);
+        struct enable_make_shared : public self_type {
+            enable_make_shared(boost::asio::io_context& ctx, OnAction&&... on_actions)
+                : self_type { ctx, std::forward<OnAction>(on_actions)... }
+            {
+            }
+        };
+        auto ret = std::make_shared<enable_make_shared>(static_cast<boost::asio::io_context&>(event_loop), std::forward<OnAction>(on_action)...);
+        ret->do_resolve(address, port);
+        return ret;
     }
 
 protected:
+    /// Constructor
+    explicit connector(boost::asio::io_context& ctx,
+        on_connect_type&& on_connect);
+
+    /// Constructor
+    explicit connector(boost::asio::io_context& ctx, on_connect_type&& on_connect,
+        on_error_type&& on_error);
+
     /// The method does the endpoint resolution
     /**
      * @param address String representation of the target address
@@ -115,6 +133,6 @@ private:
 
 using plain_connector = connector<>;
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()
 
 #include "impl/connector.ipp"

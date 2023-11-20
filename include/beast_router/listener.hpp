@@ -1,5 +1,8 @@
 #pragma once
 
+#include "base/config.hpp"
+#include "base/strand_stream.hpp"
+#include "common/utility.hpp"
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/socket_base.hpp>
@@ -7,11 +10,7 @@
 #include <memory>
 #include <string_view>
 
-#include "base/config.hpp"
-#include "base/strand_stream.hpp"
-#include "common/utility.hpp"
-
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 /// Listens and accepts the incoming connections.
 /**
@@ -73,22 +72,37 @@ public:
     /// The on error callback type
     using on_error_type = std::function<void(boost::system::error_code, std::string_view)>;
 
+    /// Constructor (disallowed)
+    listener(const listener& srv) = delete;
+
+    /// Assignment (disallowed)
+    self_type& operator=(const listener&) = delete;
+
+    /// Constructor (disallowed)
+    listener(listener&&) = delete;
+
+    /// Assignment (disallowed)
+    self_type& operator=(listener) = delete;
+
+    /// Destructor
+    ~listener() = default;
+
     /// The factory method which creates `self_type` and starts listening and
     /// accepts new connections
     /**
      * Creates an instance of `self_type` and starts listening by calling loop()
      * method
      *
-     * @param ctx A reference to the `boost::asio::io_context`
+     * @param event_loop A reference to the `event_loop`
      * @param endpoint A const reference to the endpoint_type
      * @param on_action A list of actions suitable for the self construction i.e.
      * `on_accept`, `on_error` signatures
-     * @returns void
+     * @returns `selft_type::listener_ptr_type`
      */
-    template <class... OnAction>
-    static auto launch(boost::asio::io_context& ctx,
+    template <class EventLoop, class... OnAction>
+    static auto launch(EventLoop& event_loop,
         const endpoint_type& endpoint, OnAction&&... on_action)
-        -> decltype(self_type { ctx, std::declval<OnAction>()... }, listener_ptr_type())
+        -> decltype(self_type { static_cast<boost::asio::io_context&>(event_loop), std::declval<OnAction>()... }, listener_ptr_type())
     {
         struct enable_make_shared : public self_type {
             enable_make_shared(boost::asio::io_context& ctx, OnAction&&... on_actions)
@@ -97,15 +111,19 @@ public:
             }
         };
 
-        auto lstnr = std::make_shared<enable_make_shared>(ctx, std::forward<OnAction>(on_action)...);
+        auto lstnr = std::make_shared<enable_make_shared>(static_cast<boost::asio::io_context&>(event_loop),
+            std::forward<OnAction>(on_action)...);
         lstnr->loop(endpoint);
         return lstnr;
     }
 
-    ROUTER_DECL void stop_listen()
+    /// The method closes the associated acceptor
+    /**
+     * @returns void
+     */
+    ROUTER_DECL void close()
     {
-        m_acceptor.release();
-        m_acceptor.stop();
+        m_acceptor.close();
     }
 
 protected:
@@ -145,6 +163,6 @@ private:
 /// Default http listener
 using http_listener = listener<>;
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()
 
 #include "impl/listener.ipp"

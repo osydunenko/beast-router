@@ -23,6 +23,9 @@
 #error The library requires C++17: a conforming compiler is needed
 #endif
 
+#define ROUTER_NAMESPACE_BEGIN() namespace beast_router {
+#define ROUTER_NAMESPACE_END() }
+
 #if ROUTER_DOXYGEN
 #define ROUTER_DECL
 #else

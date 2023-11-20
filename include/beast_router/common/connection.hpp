@@ -1,10 +1,11 @@
 #pragma once
 
+#include "../base/config.hpp"
 #include "../base/connection.hpp"
 
 #define CONNECTION_TEMPLATE_ATTRIBUTES Stream, CompletionExecutor
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 /// Encapsulates the connections related functionality
 template <class Stream, class CompletionExecutor>
@@ -62,6 +63,6 @@ private:
     stream_type m_stream;
 };
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()
 
 #include "impl/connection.ipp"

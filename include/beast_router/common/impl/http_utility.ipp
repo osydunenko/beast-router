@@ -1,16 +1,16 @@
 #pragma once
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 namespace mime_type {
 
-    static std::string_view get_mime_type(std::string_view ext)
-    {
-        std::string_view ret = default_mime;
-        if (auto it = mime_types.find(ext); it != mime_types.end()) {
-            ret = it->second;
-        }
-        return ret;
+static std::string_view get_mime_type(std::string_view ext)
+{
+    std::string_view ret = default_mime;
+    if (auto it = mime_types.find(ext); it != mime_types.end()) {
+        ret = it->second;
     }
+    return ret;
+}
 
 } // namespace mime_type
 
@@ -96,4 +96,4 @@ static http_empty_request make_empty_request(boost::beast::http::verb verb,
     return create_request<http::empty_body>(verb, version, target);
 }
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()

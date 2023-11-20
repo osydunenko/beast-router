@@ -8,7 +8,7 @@
 #include <regex>
 #include <unordered_map>
 
-namespace beast_router {
+ROUTER_NAMESPACE_BEGIN()
 
 /// Provides the sequential routing functionality.
 /**
@@ -77,18 +77,6 @@ public:
 
     /// Constructor
     router();
-
-    /// Constructor (default)
-    router(const router&) = default;
-
-    /// Assignment (default)
-    self_type& operator=(const router&) = default;
-
-    /// Constructor (default)
-    router(router&&) = default;
-
-    /// Assignment (default)
-    self_type& operator=(router&&) = default;
 
     /// Destructor
     ~router() = default;
@@ -330,6 +318,6 @@ private:
     mutable mutex_pointer_type m_mutex;
 };
 
-} // namespace beast_router
+ROUTER_NAMESPACE_END()
 
 #include "impl/router.ipp"
