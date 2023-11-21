@@ -3,8 +3,9 @@
 #include <boost/asio/strand.hpp>
 #include <boost/asio/system_timer.hpp>
 
-ROUTER_NAMESPACE_BEGIN()
-namespace base {
+#include "config.hpp"
+
+ROUTER_BASE_NAMESPACE_BEGIN()
 
 /// Base class exposes a strand stream for the multi threading applications
 struct strand_stream
@@ -17,5 +18,4 @@ struct strand_stream
     }
 };
 
-} // namespace base
-ROUTER_NAMESPACE_END()
+ROUTER_BASE_NAMESPACE_END()

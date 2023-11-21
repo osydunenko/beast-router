@@ -13,8 +13,7 @@
 #define LOCKABLE_ENTER_TO_WRITE(shared_mutex) \
     [[maybe_unused]] const auto& dummy_lock = beast_router::base::lockable::enter_to_write(shared_mutex);
 
-ROUTER_NAMESPACE_BEGIN()
-namespace base {
+ROUTER_BASE_NAMESPACE_BEGIN()
 
 /// Provides a locking functionality to handle a critical section
 struct lockable {
@@ -58,5 +57,4 @@ struct lockable {
     }
 };
 
-} // namespace base
-ROUTER_NAMESPACE_END()
+ROUTER_BASE_NAMESPACE_END()

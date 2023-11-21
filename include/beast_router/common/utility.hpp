@@ -4,56 +4,57 @@
 #include <tuple>
 #include <type_traits>
 
-ROUTER_NAMESPACE_BEGIN()
-namespace utility {
+#include "../base/config.hpp"
+
+ROUTER_UTILITY_NAMESPACE_BEGIN()
 namespace details {
 
-    template <class T>
-    struct is_chrono_duration : std::false_type { };
+template <class T>
+struct is_chrono_duration : std::false_type { };
 
-    template <class Rep, class Period>
-    struct is_chrono_duration<std::chrono::duration<Rep, Period>> : std::true_type {
-    };
+template <class Rep, class Period>
+struct is_chrono_duration<std::chrono::duration<Rep, Period>> : std::true_type {
+};
 
-    template <bool...>
-    struct bool_pack;
-    template <bool... V>
-    using is_all_true = std::is_same<bool_pack<true, V...>, bool_pack<V..., true>>;
+template <bool...>
+struct bool_pack;
+template <bool... V>
+using is_all_true = std::is_same<bool_pack<true, V...>, bool_pack<V..., true>>;
 
-    template <class T, class = void>
-    struct func_traits_result_type {
-        using result_type = void;
-    };
+template <class T, class = void>
+struct func_traits_result_type {
+    using result_type = void;
+};
 
-    template <class T>
-    struct func_traits_result_type<T, std::void_t<typename T::result_type>> {
-        using result_type = typename T::result_type;
-    };
+template <class T>
+struct func_traits_result_type<T, std::void_t<typename T::result_type>> {
+    using result_type = typename T::result_type;
+};
 
-    template <class R, class... Args>
-    struct func_traits_result_type<R (*)(Args...)> {
-        using result_type = R;
-    };
+template <class R, class... Args>
+struct func_traits_result_type<R (*)(Args...)> {
+    using result_type = R;
+};
 
-    template <class R, class... Args>
-    struct func_traits_result_type<R (&)(Args...)> {
-        using result_type = R;
-    };
+template <class R, class... Args>
+struct func_traits_result_type<R (&)(Args...)> {
+    using result_type = R;
+};
 
-    template <class Class, class... Args>
-    struct is_class_creatable {
-        static_assert(std::is_class_v<Class>, "Class requirements are not met");
+template <class Class, class... Args>
+struct is_class_creatable {
+    static_assert(std::is_class_v<Class>, "Class requirements are not met");
 
-        using one = char;
+    using one = char;
 
-        template <class C, class... A>
-        static auto test(int) -> decltype(C { std::declval<A>()... }, one());
+    template <class C, class... A>
+    static auto test(int) -> decltype(C { std::declval<A>()... }, one());
 
-        template <class C, class... A>
-        static char (&test(...))[2];
+    template <class C, class... A>
+    static char (&test(...))[2];
 
-        enum { value = sizeof(test<Class, Args...>(0) == sizeof(one)) };
-    };
+    enum { value = sizeof(test<Class, Args...>(0) == sizeof(one)) };
+};
 
 } // namespace details
 
@@ -91,5 +92,4 @@ void tuple_func_idx(std::size_t idx, const Tuple& tuple,
     }((idx == Idxs && std::forward<Func>(func)(std::get<Idxs>(tuple)))...);
 }
 
-} // namespace utility
-ROUTER_NAMESPACE_END()
+ROUTER_UTILITY_NAMESPACE_END()

@@ -7,7 +7,7 @@
 static std::atomic<uint64_t> counter { 0 };
 
 /// SSL Context
-// boost::asio::ssl::context ctx { boost::asio::ssl::context::tlsv12 };
+boost::asio::ssl::context ctx { boost::asio::ssl::context::tlsv12 };
 
 static const std::string_view crt {
     "-----BEGIN CERTIFICATE-----\n"
@@ -79,6 +79,7 @@ int main(int, char**)
     ctx.set_options(boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2 | boost::asio::ssl::context::single_dh_use);
     ctx.use_certificate_chain({ crt.data(), crt.size() });
     ctx.use_private_key({ key.data(), key.size() }, boost::asio::ssl::context::file_format::pem);
+    return 0;
     /* return beast_router::http_server()
         .on_get(R"(^.*$)", [](const auto& rq, auto& ctx) {
             std::stringstream i_str;

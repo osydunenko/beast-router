@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config.hpp"
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/connect.hpp>
@@ -7,15 +8,12 @@
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/http/write.hpp>
 
-#include "config.hpp"
-
 #define BASE_CONNECTION_TEMPLATE_ATTRIBUTES Derived, CompletionExecutor
 
-ROUTER_NAMESPACE_BEGIN()
-namespace base {
+ROUTER_BASE_NAMESPACE_BEGIN()
 
 template <class Derived, class CompletionExecutor>
-class connection : private boost::noncopyable {
+class connection {
     static_assert(boost::asio::is_executor<CompletionExecutor>::value,
         "connection requirements are not met");
 
@@ -24,6 +22,18 @@ class connection : private boost::noncopyable {
 public:
     /// Contructor
     connection(const CompletionExecutor& executor);
+
+    /// Constructor (disallowed)
+    connection(connection&) = delete;
+
+    /// Assignment (disallowed)
+    connection& operator=(const connection&) = delete;
+
+    /// Constructor (default)
+    connection(connection&&) = default;
+
+    /// Assignment (default)
+    connection& operator=(connection&&) = default;
 
     /// Destructor
     virtual ~connection() = default;
@@ -70,7 +80,6 @@ protected:
     const CompletionExecutor& m_completion_executor;
 };
 
-} // namespace base
-ROUTER_NAMESPACE_END()
+ROUTER_BASE_NAMESPACE_END()
 
 #include "impl/connection.ipp"

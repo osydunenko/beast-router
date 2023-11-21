@@ -20,7 +20,10 @@ add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 # Check prereqs
 find_package(Boost REQUIRED COMPONENTS system thread)
 find_package(Doxygen)
-find_package(OpenSSL COMPONENTS Crypto SSL)
+
+if (LINK_SSL)
+    find_package(OpenSSL COMPONENTS Crypto SSL)
+endif()
 
 find_program(CLANGFORMAT_PATH clang-format)
 
@@ -33,7 +36,8 @@ target_link_libraries(${PROJECT_NAME}
     INTERFACE
         Boost::system
         Boost::thread
-        $<$<BOOL:${LINK_SSL}>:OpenSSL::Crypto OpenSSL::SSL>)
+        $<$<BOOL:${LINK_SSL}>:
+            OpenSSL::Crypto OpenSSL::SSL>)
 
 target_compile_definitions(${PROJECT_NAME}
     INTERFACE

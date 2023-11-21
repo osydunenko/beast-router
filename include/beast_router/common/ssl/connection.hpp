@@ -1,12 +1,12 @@
 #pragma once
 
+#include "../../base/config.hpp"
 #include "../../base/connection.hpp"
 #include <boost/asio/ssl.hpp>
 
 #define SSL_CONNECTION_TEMPLATE_ATTRIBUTES Stream, CompletionExecutor
 
-ROUTER_NAMESPACE_BEGIN()
-namespace ssl {
+ROUTER_SSL_NAMESPACE_BEGIN()
 
 /// Encapsulates the ssl connection related functionality
 template <class Stream, class CompletionExecutor>
@@ -17,7 +17,7 @@ public:
     /// The self type
     using self_type = connection<SSL_CONNECTION_TEMPLATE_ATTRIBUTES>;
 
-    /// The stream type
+    /// The ssl stream type
     using stream_type = boost::asio::ssl::stream<Stream>;
 
     /// The shutdown type
@@ -27,7 +27,7 @@ public:
     using handshake_type = boost::asio::ssl::stream_base::handshake_type;
 
     /// Constructor
-    explicit connection(Stream&& stream, const CompletionExecutor& executor);
+    explicit connection(Stream&& stream, boost::asio::ssl::context& ctx, const CompletionExecutor& executor);
 
     /// Destructor
     ~connection() override;
@@ -84,7 +84,6 @@ private:
     stream_type m_stream;
 };
 
-} // namespace ssl
-ROUTER_NAMESPACE_END()
+ROUTER_SSL_NAMESPACE_END()
 
 #include "impl/connection.ipp"

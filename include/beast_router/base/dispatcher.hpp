@@ -9,8 +9,7 @@
 #include "config.hpp"
 #include "lockable.hpp"
 
-ROUTER_NAMESPACE_BEGIN()
-namespace base {
+ROUTER_BASE_NAMESPACE_BEGIN()
 
 template <class Session>
 class dispatcher {
@@ -120,5 +119,4 @@ private:
     mutex_pointer_type m_mutex;
 };
 
-} // namespace base
-ROUTER_NAMESPACE_END()
+ROUTER_BASE_NAMESPACE_END()

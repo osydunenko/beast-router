@@ -3,14 +3,15 @@
 #include "../base/config.hpp"
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/signal_set.hpp>
+#include <boost/thread.hpp>
 #include <thread>
-#include <vector>
 
 ROUTER_NAMESPACE_BEGIN()
 
 class event_loop : public std::enable_shared_from_this<event_loop> {
     template <class, class, class, template <typename> class>
     friend class listener;
+
     template <class, class, class, template <typename> class>
     friend class connector;
 
@@ -19,10 +20,8 @@ public:
     using event_loop_ptr_type = std::shared_ptr<event_loop>;
 
     event_loop(const event_loop&) = delete;
-    event_loop(event_loop&& other) = delete;
     event_loop& operator=(const event_loop&) = delete;
-    event_loop& operator=(event_loop rhs) = delete;
-    ~event_loop() = default;
+    ~event_loop();
 
     ROUTER_DECL int exec();
     ROUTER_DECL threads_num_type get_threads() const;
@@ -35,12 +34,11 @@ public:
 
 protected:
     event_loop(threads_num_type threads = 0u);
-    ROUTER_DECL void set_threads(threads_num_type threads);
     ROUTER_DECL operator boost::asio::io_context&() { return m_ioc; }
 
 private:
     threads_num_type m_threads_num;
-    std::vector<std::thread> m_threads;
+    boost::thread_group m_threads;
     boost::asio::io_context m_ioc;
     boost::asio::signal_set m_sig_int_term;
 };

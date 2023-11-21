@@ -1,11 +1,11 @@
 #pragma once
 
+#include "config.hpp"
 #include <memory>
 #include <queue>
 #include <utility>
 
-ROUTER_NAMESPACE_BEGIN()
-namespace base {
+ROUTER_BASE_NAMESPACE_BEGIN()
 
 /// Handles packages dispatching to be sent
 template <class Impl>
@@ -74,5 +74,4 @@ private:
     std::queue<wrk_ptr_type> m_items;
 };
 
-} // namespace base
-ROUTER_NAMESPACE_END()
+ROUTER_BASE_NAMESPACE_END()

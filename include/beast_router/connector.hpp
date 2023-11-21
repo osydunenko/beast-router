@@ -13,10 +13,8 @@
 ROUTER_NAMESPACE_BEGIN()
 
 /// Makes a client connection to the given host
-template <class Protocol = boost::asio::ip::tcp,
-    class Resolver = typename Protocol::resolver,
-    class Socket = boost::asio::basic_stream_socket<Protocol>,
-    template <typename> class Endpoint = boost::asio::ip::basic_endpoint>
+template <class Protocol, class Resolver,
+    class Socket, template <typename> class Endpoint>
 class connector : public base::strand_stream,
                   public std::enable_shared_from_this<
                       connector<Protocol, Resolver, Socket, Endpoint>> {
@@ -54,11 +52,11 @@ public:
     /// Assignment (disallowed)
     self_type& operator=(const connector&) = delete;
 
-    /// Constructor (disallowed)
-    connector(connector&&) = delete;
+    /// Constructor (default)
+    connector(connector&&) = default;
 
-    /// Assignment (disallowed)
-    self_type& operator=(connector) = delete;
+    /// Assignment (default)
+    self_type& operator=(connector&&) = default;
 
     /// Destructor
     ~connector() = default;
@@ -131,7 +129,11 @@ private:
     connection_type m_connection;
 };
 
-using plain_connector = connector<>;
+/// Default connector type
+using http_connector_type = connector<boost::asio::ip::tcp,
+    boost::asio::ip::tcp::resolver,
+    boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+    boost::asio::ip::basic_endpoint>;
 
 ROUTER_NAMESPACE_END()
 

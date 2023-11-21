@@ -7,6 +7,9 @@
 #include "base/storage.hpp"
 #include "base/strand_stream.hpp"
 #include "common/connection.hpp"
+#if defined(LINK_SSL)
+#include "common/ssl/connection.hpp"
+#endif
 #include "common/timer.hpp"
 #include "router.hpp"
 #include <algorithm>
@@ -20,6 +23,7 @@
 #include <boost/beast/http/string_body.hpp>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 ROUTER_NAMESPACE_BEGIN()
 
@@ -37,10 +41,8 @@ ROUTER_NAMESPACE_BEGIN()
  * @li Socket -- Defines a sicket type
  *
  */
-template <bool IsRequest, class Body = boost::beast::http::string_body,
-    class Buffer = boost::beast::flat_buffer,
-    class Protocol = boost::asio::ip::tcp,
-    class Socket = boost::asio::basic_stream_socket<Protocol>>
+template <bool IsRequest, class Body, class Buffer,
+    class Protocol, class Socket, class Connection>
 class session final {
     class impl;
 
@@ -56,7 +58,7 @@ public:
 #endif
 
     /// The self type
-    using self_type = session<IsRequest, Body, Buffer, Protocol, Socket>;
+    using self_type = session<IsRequest, Body, Buffer, Protocol, Socket, Connection>;
 
     /// The body type associated with the message_type
     using body_type = Body;
@@ -88,7 +90,10 @@ public:
     using context_type = context<impl_type>;
 
     /// The connection type
-    using connection_type = connection<socket_type, base::strand_stream::asio_type>;
+    using connection_type = Connection;
+
+    /// The stream type
+    using stream_type = typename connection_type::stream_type;
 
     /// The timer type
     using timer_type = timer<base::strand_stream::asio_type, boost::asio::steady_timer>;
@@ -139,7 +144,7 @@ public:
      * @returns context_type
      */
     template <class TimeDuration, class... OnAction>
-    static context_type recv(socket_type&& socket, const router_type& router,
+    static context_type recv(std::piecewise_construct_t, socket_type&& socket, const router_type& router,
         TimeDuration&& duration, OnAction&&... on_action);
 
     /// The method for sending data
@@ -167,9 +172,9 @@ public:
      * @param on_action A list of callbacks
      * @returns context_type
      */
-    /*template <class Request, class TimeDuration, class... OnAction>
-    static context_type send(socket_type&& socket, Request&& request,
-        const router_type& router, TimeDuration&& duration, OnAction&&... on_action);*/
+    template <class Request, class TimeDuration, class... OnAction>
+    static context_type send(std::piecewise_construct_t, socket_type&& socket, Request&& request,
+        const router_type& router, TimeDuration&& duration, OnAction&&... on_action);
 
 private:
     template <class... OnAction>
@@ -197,11 +202,14 @@ private:
         explicit impl(socket_type&& socket, buffer_type&& buffer,
             const router_type& router, const on_error_type& on_error);
 
-        [[nodiscard]] self_type& recv();
-        [[nodiscard]] self_type& recv(timer_duration_type duration);
+        self_type& recv();
+        self_type& recv(timer_duration_type duration);
 
         template <class Message>
-        [[nodiscard]] self_type& send(Message&& message,
+        self_type& send(Message&& message);
+
+        template <class Message>
+        self_type& send(Message&& message,
             timer_duration_type duration);
 
     private:
@@ -219,6 +227,7 @@ private:
         template <bool IsMessageRequest, class MessageBody, class Fields>
         void do_write(boost::beast::http::message<IsMessageRequest, MessageBody,
             Fields>& message);
+
         void on_write(boost::system::error_code ec, std::size_t bytes_transferred,
             bool close);
 
@@ -322,21 +331,29 @@ public:
          */
         ROUTER_DECL typename connection_type::stream_type& get_stream();
 
-    protected:
-        template <class Message, class TimeDuration>
-        void do_send(Message&& message, TimeDuration&& duration) const;
-
     private:
         std::shared_ptr<Impl> m_impl;
         std::any m_user_data;
     };
 };
 
-/// Default http server session
-using server_session = session<true>;
+/// Default http server session type
+using http_server_type = session<true,
+    boost::beast::http::string_body,
+    boost::beast::flat_buffer,
+    boost::asio::ip::tcp,
+    boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+    connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+        base::strand_stream::asio_type>>;
 
-/// Default http client sessionl
-using client_session = session<false>;
+/// Default http client session type
+using http_client_type = session<false,
+    boost::beast::http::string_body,
+    boost::beast::flat_buffer,
+    boost::asio::ip::tcp,
+    boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+    connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+        base::strand_stream::asio_type>>;
 
 ROUTER_NAMESPACE_END()
 

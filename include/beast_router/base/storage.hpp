@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "../common/utility.hpp"
+#include "config.hpp"
 
-ROUTER_NAMESPACE_BEGIN()
-namespace base {
+ROUTER_BASE_NAMESPACE_BEGIN()
 
 /// Encapsulates and stores callbacks associated with resources
 template <class Session>
@@ -144,5 +144,4 @@ private:
     container_type m_clbs;
 };
 
-} // namespace base
-ROUTER_NAMESPACE_END()
+ROUTER_BASE_NAMESPACE_END()

@@ -3,15 +3,14 @@
 #define SSL_CONNECTION_TEMPLATE_DECLARE \
     template <class Stream, class CompletionExecutor>
 
-ROUTER_NAMESPACE_BEGIN()
-namespace ssl {
+ROUTER_SSL_NAMESPACE_BEGIN()
 
 SSL_CONNECTION_TEMPLATE_DECLARE
 connection<SSL_CONNECTION_TEMPLATE_ATTRIBUTES>::connection(
-    Stream&& stream, const CompletionExecutor& executor)
+    Stream&& stream, boost::asio::ssl::context& ctx, const CompletionExecutor& executor)
     : base::connection<connection<Stream, CompletionExecutor>,
         CompletionExecutor> { executor }
-    , m_stream { std::move(stream) }
+    , m_stream { std::move(stream), ctx }
 {
 }
 
@@ -79,5 +78,4 @@ connection<SSL_CONNECTION_TEMPLATE_ATTRIBUTES>::stream()
     return m_stream;
 }
 
-} // namespace ssl
-ROUTER_NAMESPACE_END()
+ROUTER_SSL_NAMESPACE_END()

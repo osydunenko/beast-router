@@ -1,7 +1,6 @@
 #pragma once
 
 ROUTER_NAMESPACE_BEGIN()
-namespace details {
 
 template <bool IsRequest, class Body>
 struct serializer;
@@ -16,13 +15,11 @@ struct serializer<false, Body> {
     using type = boost::beast::http::response_serializer<Body>;
 };
 
-} // namespace details
-
 #define SESSION_TEMPLATE_DECLARE                                        \
     template <bool IsRequest, class Body, class Buffer, class Protocol, \
-        class Socket>
+        class Socket, class Connection>
 #define SESSION_TEMPLATE_ATTRIBUTES \
-    IsRequest, Body, Buffer, Protocol, Socket
+    IsRequest, Body, Buffer, Protocol, Socket, Connection
 
 SESSION_TEMPLATE_DECLARE
 template <class... OnAction>
@@ -40,7 +37,7 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type&& socket,
 SESSION_TEMPLATE_DECLARE
 template <class TimeDuration, class... OnAction>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
-session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type&& socket,
+session<SESSION_TEMPLATE_ATTRIBUTES>::recv(std::piecewise_construct_t, socket_type&& socket,
     const router_type& router,
     TimeDuration&& duration,
     OnAction&&... on_action)
@@ -66,10 +63,10 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::send(socket_type&& socket,
     return ctx;
 }
 
-/*SESSION_TEMPLATE_DECLARE
+SESSION_TEMPLATE_DECLARE
 template <class Request, class TimeDuration, class... OnAction>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
-session<SESSION_TEMPLATE_ATTRIBUTES>::send(socket_type&& socket,
+session<SESSION_TEMPLATE_ATTRIBUTES>::send(std::piecewise_construct_t, socket_type&& socket,
     Request&& request,
     const router_type& router,
     TimeDuration&& duration,
@@ -80,7 +77,7 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::send(socket_type&& socket,
         std::forward<OnAction>(on_action)...);
     ctx.send(std::forward<Request>(request), std::forward<TimeDuration>(duration));
     return ctx;
-}*/
+}
 
 SESSION_TEMPLATE_DECLARE
 template <class... OnAction>
@@ -106,7 +103,7 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::impl::impl(socket_type&& socket,
         static_cast<base::strand_stream&>(*this) }
     , m_timer { static_cast<base::strand_stream&>(*this) }
     , m_buffer { std::move(buffer) }
-    , m_on_error { on_error }
+    , m_on_error { std::move(on_error) }
     , m_queue { *this }
     , m_serializer {}
     , m_parser {}
@@ -138,6 +135,15 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(Message&& message,
     timer_duration_type duration)
 {
     do_timer(std::move(duration));
+    m_queue(std::forward<Message>(message));
+    return *this;
+}
+
+SESSION_TEMPLATE_DECLARE
+template <class Message>
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type&
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::send(Message&& message)
+{
     m_queue(std::forward<Message>(message));
     return *this;
 }
@@ -219,7 +225,7 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_write(
     boost::beast::http::message<IsMessageRequest, MessageBody, Fields>& message)
 {
     using serializer_type =
-        typename details::serializer<IsMessageRequest, MessageBody>::type;
+        typename serializer<IsMessageRequest, MessageBody>::type;
 
     m_serializer = std::make_any<serializer_type>(message);
 
@@ -295,7 +301,11 @@ template <class Message>
 ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(
     Message&& message) const
 {
-    do_send(std::forward<Message>(message), timer_duration_type::max());
+    BOOST_ASSERT(m_impl != nullptr);
+    boost::asio::dispatch(static_cast<base::strand_stream>(*m_impl),
+        [impl = m_impl->shared_from_this(), msg = std::forward<Message>(message)]() mutable {
+            impl->send(std::forward<Message>(msg));
+        });
 }
 
 SESSION_TEMPLATE_DECLARE
@@ -304,7 +314,14 @@ template <class Message, class TimeDuration>
 ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(
     Message&& message, TimeDuration&& duration) const
 {
-    do_send(std::forward<Message>(message), std::forward<TimeDuration>(duration));
+    static_assert(utility::is_chrono_duration_v<TimeDuration>,
+        "TimeDuration requirements are not met");
+
+    BOOST_ASSERT(m_impl != nullptr);
+    boost::asio::dispatch(static_cast<base::strand_stream>(*m_impl),
+        [impl = m_impl->shared_from_this(), msg = std::forward<Message>(message), dur = std::forward<TimeDuration>(duration)]() mutable {
+            impl->send(std::forward<Message>(msg), std::forward<TimeDuration>(dur));
+        });
 }
 
 SESSION_TEMPLATE_DECLARE
@@ -346,28 +363,6 @@ ROUTER_DECL typename session<SESSION_TEMPLATE_ATTRIBUTES>::connection_type::stre
 session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::get_stream()
 {
     return m_impl->m_connection.stream();
-}
-
-SESSION_TEMPLATE_DECLARE
-template <class Impl>
-template <class Message, class TimeDuration>
-void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::do_send(
-    Message&& message, TimeDuration&& duration) const
-{
-    static_assert(utility::is_chrono_duration_v<TimeDuration>,
-        "TimeDuration requirements are not met");
-
-    BOOST_ASSERT(m_impl != nullptr);
-
-    auto callback = [msg = std::forward<Message>(message),
-                        dur = std::forward<TimeDuration>(duration),
-                        impl = m_impl->shared_from_this()]() mutable -> Impl& {
-        return impl->send(std::forward<Message>(msg),
-            std::forward<TimeDuration>(dur));
-    };
-
-    boost::asio::dispatch(static_cast<base::strand_stream&>(*m_impl),
-        std::move(callback));
 }
 
 ROUTER_NAMESPACE_END()

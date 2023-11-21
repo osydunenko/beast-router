@@ -12,9 +12,9 @@ event_loop::event_loop(threads_num_type threads)
 {
 }
 
-ROUTER_DECL void event_loop::set_threads(threads_num_type threads)
+event_loop::~event_loop()
 {
-    m_threads_num = threads;
+    stop();
 }
 
 ROUTER_DECL event_loop::threads_num_type
@@ -26,10 +26,7 @@ event_loop::get_threads() const
 ROUTER_DECL void event_loop::stop()
 {
     m_ioc.stop();
-
-    for (auto& thread : m_threads) {
-        thread.join();
-    }
+    m_threads.join_all();
 }
 
 ROUTER_DECL bool event_loop::is_running() const
@@ -49,15 +46,7 @@ ROUTER_DECL int event_loop::exec()
     if (m_threads_num == 0) {
         m_ioc.run();
     } else {
-        for (decltype(m_threads_num) cnt = 0; cnt < m_threads_num; ++cnt) {
-            m_threads.emplace_back([this]() {
-                m_ioc.run();
-            });
-        }
-
-        for (auto& thread : m_threads) {
-            thread.join();
-        }
+        m_threads.create_thread([this]() { m_ioc.run(); });
     }
 
     return ret_code;

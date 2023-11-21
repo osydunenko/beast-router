@@ -1,14 +1,3 @@
-set(SRCS main.cpp)
-
-add_executable(time_counter ${SRCS})
-
-target_link_libraries(
-    time_counter
-    PRIVATE
-        beast_router::beast_router
-        beast_router::compile_options
-)
-
 set(DOC_BASE_PATH "${CMAKE_CURRENT_BINARY_DIR}/doc")
 
 configure_file(
@@ -20,5 +9,6 @@ add_custom_target(
     COMMAND ${CMAKE_COMMAND} -E copy_directory 
         "${CMAKE_CURRENT_SOURCE_DIR}/doc"
         "${DOC_BASE_PATH}"
-    DEPENDS time_counter
-)
+    DEPENDS time_counter)
+
+add_example(time_counter SOURCES main.cpp)

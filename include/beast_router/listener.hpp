@@ -22,28 +22,26 @@ ROUTER_NAMESPACE_BEGIN()
  *
  * ### Example
  * ```cpp
- * http_listener::on_error_type on_error = [](boost::system::error_code ec,
+ * http_listener_type::on_error_type on_error = [](boost::system::error_code ec,
  std::string_view v) {
  *      if (ec == boost::system::errc::address_in_use ||
  *          ec == boost::system::errc::permission_denied)
  *          g_ioc.stop();
  *  };
 
- *  http_listener::on_accept_type on_accept =
- [&on_error](http_listener::socket_type socket) {
- *      server_session::recv(std::move(socket), g_router, 5s, on_error);
+ *  http_listener_type::on_accept_type on_accept =
+ [&on_error](http_listener_type::socket_type socket) {
+ *      http_server_type::recv(std::move(socket), g_router, 5s, on_error);
  *  };
 
  *  const auto address = boost::asio::ip::address_v4::any();
  *  const auto port = static_cast<unsigned short>(8081);
 
- *  http_listener::launch(g_ioc, {address, port}, on_accept, on_error);
+ *  http_listener_type::launch(g_ioc, {address, port}, on_accept, on_error);
  * ```
  */
-template <class Protocol = boost::asio::ip::tcp,
-    class Acceptor = boost::asio::basic_socket_acceptor<Protocol>,
-    class Socket = boost::asio::basic_stream_socket<Protocol>,
-    template <typename> class Endpoint = boost::asio::ip::basic_endpoint>
+template <class Protocol, class Acceptor,
+    class Socket, template <typename> class Endpoint>
 class listener : public base::strand_stream,
                  public std::enable_shared_from_this<
                      listener<Protocol, Acceptor, Socket, Endpoint>> {
@@ -73,16 +71,16 @@ public:
     using on_error_type = std::function<void(boost::system::error_code, std::string_view)>;
 
     /// Constructor (disallowed)
-    listener(const listener& srv) = delete;
+    listener(const listener&) = delete;
 
     /// Assignment (disallowed)
     self_type& operator=(const listener&) = delete;
 
-    /// Constructor (disallowed)
-    listener(listener&&) = delete;
+    /// Constructor (default)
+    listener(listener&&) = default;
 
-    /// Assignment (disallowed)
-    self_type& operator=(listener) = delete;
+    /// Assignment (default)
+    self_type& operator=(listener&&) = default;
 
     /// Destructor
     ~listener() = default;
@@ -160,8 +158,11 @@ private:
     endpoint_type m_endpoint;
 };
 
-/// Default http listener
-using http_listener = listener<>;
+/// Default http listener type
+using http_listener_type = listener<boost::asio::ip::tcp,
+    boost::asio::basic_socket_acceptor<boost::asio::ip::tcp>,
+    boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+    boost::asio::ip::basic_endpoint>;
 
 ROUTER_NAMESPACE_END()
 

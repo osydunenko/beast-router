@@ -23,15 +23,17 @@
 #error The library requires C++17: a conforming compiler is needed
 #endif
 
+#define ROUTER_BASE_NAMESPACE_BEGIN() namespace beast_router::base {
+#define ROUTER_BASE_NAMESPACE_END() }
 #define ROUTER_NAMESPACE_BEGIN() namespace beast_router {
 #define ROUTER_NAMESPACE_END() }
+#define ROUTER_SSL_NAMESPACE_BEGIN() namespace beast_router::ssl {
+#define ROUTER_SSL_NAMESPACE_END() }
+#define ROUTER_UTILITY_NAMESPACE_BEGIN() namespace beast_router::utility {
+#define ROUTER_UTILITY_NAMESPACE_END() }
 
 #if ROUTER_DOXYGEN
 #define ROUTER_DECL
 #else
 #define ROUTER_DECL inline
-#endif
-
-#if LINK_SSL
-#define SSL
 #endif

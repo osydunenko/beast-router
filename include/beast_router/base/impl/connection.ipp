@@ -5,8 +5,7 @@
 #define BASE_CONNECTION_TEMPLATE_DECLARE \
     template <class Derived, class CompletionExecutor>
 
-ROUTER_NAMESPACE_BEGIN()
-namespace base {
+ROUTER_BASE_NAMESPACE_BEGIN()
 
 BASE_CONNECTION_TEMPLATE_DECLARE
 connection<BASE_CONNECTION_TEMPLATE_ATTRIBUTES>::connection(
@@ -67,5 +66,4 @@ void connection<BASE_CONNECTION_TEMPLATE_ATTRIBUTES>::async_read(
             std::forward<Function>(func)));
 }
 
-} // namespace base
-ROUTER_NAMESPACE_END()
+ROUTER_BASE_NAMESPACE_END()
