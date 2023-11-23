@@ -1,5 +1,6 @@
 #include "beast_router.hpp"
 #include <iostream>
+#include <exception>
 
 using namespace std::chrono_literals;
 
@@ -25,7 +26,7 @@ int main(int, char**)
 
         /// On error handler
         beast_router::http_connector_type::on_error_type on_error = [event_loop](boost::system::error_code,
-                                                                   std::string_view msg) {
+                                                                        std::string_view msg) {
             std::cerr << "Error: " << msg << std::endl;
             event_loop->stop();
         };
@@ -38,9 +39,8 @@ int main(int, char**)
 
     /// On connect error handler
     beast_router::http_connector_type::on_error_type on_error = [event_loop](boost::system::error_code ec,
-                                                               std::string_view msg) {
-        std::cerr << "On connect error: " << msg << ":" << ec << std::endl;
-        event_loop->stop();
+                                                                    std::string_view msg) {
+        throw std::runtime_error(ec.message());
     };
 
     /// Connect to the host and send the request

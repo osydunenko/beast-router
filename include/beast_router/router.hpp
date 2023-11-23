@@ -23,8 +23,8 @@ ROUTER_NAMESPACE_BEGIN()
  * @code
  * #include "beast_router.hpp"
  * ...
- * auto clb = [](const server_session::message_type &rq,
- * server_session::context_type &ctx, const std::smatch &match) {
+ * auto clb = [](const http_server_type::message_type &rq,
+ * http_server_type::context_type &ctx, const std::smatch &match) {
  *      http_string_response rp{boost::beast::http::status::ok, rq.version()};
  *      rp.set(boost::beast::http::field::content_type, "text/html");
  *

@@ -13,6 +13,9 @@ class connection
     : public base::connection<connection<Stream, CompletionExecutor>,
           CompletionExecutor> {
 public:
+    /// Typedef for is ssl
+    using is_ssl_context = std::false_type;
+
     /// The self type
     using self_type = connection<CONNECTION_TEMPLATE_ATTRIBUTES>;
 

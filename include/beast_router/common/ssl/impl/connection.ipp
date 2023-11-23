@@ -60,7 +60,7 @@ connection<SSL_CONNECTION_TEMPLATE_ATTRIBUTES>::close()
 SSL_CONNECTION_TEMPLATE_DECLARE
 bool connection<SSL_CONNECTION_TEMPLATE_ATTRIBUTES>::is_open() const
 {
-    return m_stream.is_open();
+    return m_stream.next_layer().is_open();
 }
 
 SSL_CONNECTION_TEMPLATE_DECLARE

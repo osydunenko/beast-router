@@ -14,6 +14,9 @@ class connection
     : public base::connection<connection<Stream, CompletionExecutor>,
           CompletionExecutor> {
 public:
+    /// Typedef for is ssl
+    using is_ssl_context = std::true_type;
+
     /// The self type
     using self_type = connection<SSL_CONNECTION_TEMPLATE_ATTRIBUTES>;
 
@@ -21,7 +24,7 @@ public:
     using stream_type = boost::asio::ssl::stream<Stream>;
 
     /// The shutdown type
-    using shutdown_type = typename stream_type::shutdown_type;
+    using shutdown_type = typename Stream::shutdown_type;
 
     /// The handshake type
     using handshake_type = boost::asio::ssl::stream_base::handshake_type;
@@ -66,7 +69,13 @@ public:
     /**
      * @returns bool
      */
-    bool is_open() const;
+    ROUTER_DECL bool is_open() const;
+
+    /// Obtains the connection state
+    /**
+     * @returns bool
+     */
+    // bool is_open() const;
 
     /// Returns the stream and releases the ownership
     /**

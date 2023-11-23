@@ -7,9 +7,6 @@
 #include "base/storage.hpp"
 #include "base/strand_stream.hpp"
 #include "common/connection.hpp"
-#if defined(LINK_SSL)
-#include "common/ssl/connection.hpp"
-#endif
 #include "common/timer.hpp"
 #include "router.hpp"
 #include <algorithm>
@@ -26,6 +23,52 @@
 #include <utility>
 
 ROUTER_NAMESPACE_BEGIN()
+template <bool, class, class, class, class, class>
+class session;
+
+/// Default http server session type
+using http_server_type = session<true,
+    boost::beast::http::string_body,
+    boost::beast::flat_buffer,
+    boost::asio::ip::tcp,
+    boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+    connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+        base::strand_stream::asio_type>>;
+
+/// Default http client session type
+using http_client_type = session<false,
+    boost::beast::http::string_body,
+    boost::beast::flat_buffer,
+    boost::asio::ip::tcp,
+    boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+    connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+        base::strand_stream::asio_type>>;
+ROUTER_NAMESPACE_END()
+
+#if defined(LINK_SSL)
+#include "common/ssl/connection.hpp"
+ROUTER_SSL_NAMESPACE_BEGIN()
+/// Default tls http server session type
+using http_server_type = session<true,
+    boost::beast::http::string_body,
+    boost::beast::flat_buffer,
+    boost::asio::ip::tcp,
+    boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+    ssl::connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+        base::strand_stream::asio_type>>;
+
+/// Default tls http client session type
+using http_client_type = session<false,
+    boost::beast::http::string_body,
+    boost::beast::flat_buffer,
+    boost::asio::ip::tcp,
+    boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+    ssl::connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
+        base::strand_stream::asio_type>>;
+ROUTER_SSL_NAMESPACE_END()
+#endif
+
+ROUTER_NAMESPACE_BEGIN()
 
 /// Encapsulates the sessions handling associated with a buffer
 /**
@@ -39,12 +82,13 @@ ROUTER_NAMESPACE_BEGIN()
  * @li Buffer -- A flat buffer which uses the default allocator
  * @li Protocol -- Defines a protocl used for
  * @li Socket -- Defines a sicket type
- *
  */
 template <bool IsRequest, class Body, class Buffer,
     class Protocol, class Socket, class Connection>
 class session final {
     class impl;
+
+    static constexpr bool is_ssl_context_v = Connection::is_ssl_context::value;
 
 public:
     template <class>
@@ -116,7 +160,7 @@ public:
     /// Typedef definition of the connection queue
     using conn_queue_type = base::conn_queue<impl_type>;
 
-    /// Typdef definition of the dispatcher
+    /// Typedef definition of the dispatcher
     using dispatcher_type = base::dispatcher<self_type>;
 
     /// The method for receiving data
@@ -129,8 +173,16 @@ public:
      * @returns context_type
      */
     template <class... OnAction>
-    static context_type recv(socket_type&& socket, const router_type& router,
-        OnAction&&... on_action);
+    static auto recv(socket_type&& socket, const router_type& router,
+        OnAction&&... on_action)
+        -> decltype(not is_ssl_context_v, context_type())
+    {
+        static_assert(IsRequest, "session::recv requirements are not met");
+        context_type ctx = init_context(std::move(socket), router,
+            std::forward<OnAction>(on_action)...);
+        ctx.recv();
+        return ctx;
+    }
 
     /// The method for receiving data whithin the given timeout
     /**
@@ -143,9 +195,18 @@ public:
      * @param on_action A list of callbacks
      * @returns context_type
      */
-    template <class TimeDuration, class... OnAction>
-    static context_type recv(std::piecewise_construct_t, socket_type&& socket, const router_type& router,
-        TimeDuration&& duration, OnAction&&... on_action);
+    template <class TimeDuration,
+        class... OnAction>
+    static auto recv(std::piecewise_construct_t, socket_type&& socket, const router_type& router,
+        TimeDuration&& duration, OnAction&&... on_action)
+        -> decltype(not is_ssl_context_v, context_type())
+    {
+        static_assert(IsRequest, "session::recv requirements are not met");
+        context_type ctx = init_context(std::move(socket), router,
+            std::forward<OnAction>(on_action)...);
+        ctx.recv(std::forward<TimeDuration>(duration));
+        return ctx;
+    }
 
     /// The method for sending data
     /**
@@ -157,9 +218,18 @@ public:
      * @param on_action A list of callbacks
      * @returns context_type
      */
-    template <class Request, class... OnAction>
-    static context_type send(socket_type&& socket, Request&& request,
-        const router_type& router, OnAction&&... on_action);
+    template <class Request,
+        class... OnAction>
+    static auto send(socket_type&& socket, Request&& request,
+        const router_type& router, OnAction&&... on_action)
+        -> decltype(not is_ssl_context_v, context_type())
+    {
+        static_assert(!IsRequest, "session::send requirements are not met");
+        context_type ctx = init_context(std::move(socket), router,
+            std::forward<OnAction>(on_action)...);
+        ctx.send(std::forward<Request>(request));
+        return ctx;
+    }
 
     /// The method for sending data
     /**
@@ -172,15 +242,60 @@ public:
      * @param on_action A list of callbacks
      * @returns context_type
      */
-    template <class Request, class TimeDuration, class... OnAction>
-    static context_type send(std::piecewise_construct_t, socket_type&& socket, Request&& request,
-        const router_type& router, TimeDuration&& duration, OnAction&&... on_action);
+    template <class Request,
+        class TimeDuration,
+        class... OnAction>
+    static auto send(std::piecewise_construct_t, socket_type&& socket, Request&& request,
+        const router_type& router, TimeDuration&& duration, OnAction&&... on_action)
+        -> decltype(not is_ssl_context_v, context_type())
+    {
+        static_assert(!IsRequest, "session::send requirements are not met");
+        context_type ctx = init_context(std::move(socket), router,
+            std::forward<OnAction>(on_action)...);
+        ctx.send(std::forward<Request>(request), std::forward<TimeDuration>(duration));
+        return ctx;
+    }
+
+#if defined(LINK_SSL)
+    template <class... OnAction>
+    static auto recv(boost::asio::ssl::context& ssl_ctx,
+        socket_type&& socket, const router_type& router, OnAction&&... on_action)
+        -> decltype(is_ssl_context_v, context_type())
+    {
+        static_assert(IsRequest, "session::recv requirements are not met");
+        context_type ctx = init_context(ssl_ctx, std::move(socket), router,
+            std::forward<OnAction>(on_action)...);
+        ctx.handshake([](context_type& ctx) { ctx.recv(); });
+        return ctx;
+    }
+
+    template <class TimeDuration, class... OnAction>
+    static auto recv(std::piecewise_construct_t, boost::asio::ssl::context& ssl_ctx,
+        socket_type&& socket, const router_type& router, TimeDuration&& duration,
+        OnAction&&... on_action)
+        -> decltype(is_ssl_context_v, context_type())
+    {
+        static_assert(IsRequest, "session::recv requirements are not met");
+        context_type ctx = init_context(ssl_ctx, std::move(socket), router,
+            std::forward<OnAction>(on_action)...);
+        ctx.handshake([](context_type& ctx) { ctx.recv(); });
+        return ctx;
+    }
+#endif
 
 private:
     template <class... OnAction>
     static context_type init_context(socket_type&& socket,
         const router_type& router,
         OnAction&&... on_action);
+
+#if defined(LINK_SSL)
+    template <class... OnAction>
+    static context_type init_context(boost::asio::ssl::context& ssl_ctx,
+        socket_type&& socket,
+        const router_type& router,
+        OnAction&&... on_action);
+#endif
 
     class impl : public base::strand_stream,
                  public std::enable_shared_from_this<impl> {
@@ -201,6 +316,11 @@ private:
 
         explicit impl(socket_type&& socket, buffer_type&& buffer,
             const router_type& router, const on_error_type& on_error);
+
+#if defined(LINK_SSL)
+        explicit impl(boost::asio::ssl::context& ssl_ctx, socket_type&& socket, buffer_type&& buffer,
+            const router_type& router, const on_error_type& on_error);
+#endif
 
         self_type& recv();
         self_type& recv(timer_duration_type duration);
@@ -231,6 +351,16 @@ private:
         void on_write(boost::system::error_code ec, std::size_t bytes_transferred,
             bool close);
 
+#if defined(LINK_SSL)
+        template <class Func>
+        self_type& do_handshake(Func&& func);
+
+        template <class Func>
+        self_type& do_handshake(Func&& func, timer_duration_type duration);
+
+        void on_handshake(boost::system::error_code ec);
+#endif
+
     private:
         connection_type m_connection;
         timer_type m_timer;
@@ -249,12 +379,14 @@ public:
      * and used for the interaction whithin the connection.
      */
     template <class Impl>
-    class context {
+    class context final {
         static_assert(
             std::is_base_of_v<
                 boost::asio::strand<boost::asio::system_timer::executor_type>,
                 Impl>,
             "context requirements are not met");
+
+        friend class session;
 
     public:
         /// Constructor
@@ -297,6 +429,23 @@ public:
         template <class Message, class TimeDuration>
         ROUTER_DECL void send(Message&& message, TimeDuration&& duration) const;
 
+        /// The method executes handshake in SSL context
+        /**
+         * @param func Callback on success accepts `self_type` as a reference
+         * @returns void
+         */
+        template <class Func>
+        ROUTER_DECL void handshake(Func&& func) const;
+
+        /// The method executes handshake in SSL context
+        /**
+         * @param func Callback on success accepts `self_type` as a reference
+         * @param duration A time duration used by the timer
+         * @returns void
+         */
+        template <class Func, class TimeDuration>
+        ROUTER_DECL void handshake(Func&& func, TimeDuration&& duration) const;
+
         /// Obtains the state of the connection
         /**
          * @returns bool
@@ -332,28 +481,11 @@ public:
         ROUTER_DECL typename connection_type::stream_type& get_stream();
 
     private:
+        context();
         std::shared_ptr<Impl> m_impl;
         std::any m_user_data;
     };
 };
-
-/// Default http server session type
-using http_server_type = session<true,
-    boost::beast::http::string_body,
-    boost::beast::flat_buffer,
-    boost::asio::ip::tcp,
-    boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
-    connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
-        base::strand_stream::asio_type>>;
-
-/// Default http client session type
-using http_client_type = session<false,
-    boost::beast::http::string_body,
-    boost::beast::flat_buffer,
-    boost::asio::ip::tcp,
-    boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
-    connection<boost::asio::basic_stream_socket<boost::asio::ip::tcp>,
-        base::strand_stream::asio_type>>;
 
 ROUTER_NAMESPACE_END()
 

@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 #include <sstream>
+#include <exception>
 
 using namespace std::chrono_literals;
 
@@ -41,10 +42,7 @@ int main(int, char**)
     /// Define callbacks for the listener
     beast_router::http_listener_type::on_error_type on_error = [event_loop](boost::system::error_code ec,
                                                                    std::string_view) {
-        if (ec == boost::system::errc::address_in_use || ec == boost::system::errc::permission_denied) {
-            std::cerr << "Address in use or permission denied" << std::endl;
-            event_loop->stop();
-        }
+        throw std::runtime_error(ec.message());
     };
 
     beast_router::http_listener_type::on_accept_type on_accept = [&on_error, &router](beast_router::http_listener_type::socket_type socket) {

@@ -24,74 +24,33 @@ struct serializer<false, Body> {
 SESSION_TEMPLATE_DECLARE
 template <class... OnAction>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
-session<SESSION_TEMPLATE_ATTRIBUTES>::recv(socket_type&& socket,
-    const router_type& router,
-    OnAction&&... on_action)
-{
-    context_type ctx = init_context(std::move(socket), router,
-        std::forward<OnAction>(on_action)...);
-    ctx.recv();
-    return ctx;
-}
-
-SESSION_TEMPLATE_DECLARE
-template <class TimeDuration, class... OnAction>
-typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
-session<SESSION_TEMPLATE_ATTRIBUTES>::recv(std::piecewise_construct_t, socket_type&& socket,
-    const router_type& router,
-    TimeDuration&& duration,
-    OnAction&&... on_action)
-{
-    context_type ctx = init_context(std::move(socket), router,
-        std::forward<OnAction>(on_action)...);
-    ctx.recv(std::forward<TimeDuration>(duration));
-    return ctx;
-}
-
-SESSION_TEMPLATE_DECLARE
-template <class Request, class... OnAction>
-typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
-session<SESSION_TEMPLATE_ATTRIBUTES>::send(socket_type&& socket,
-    Request&& request,
-    const router_type& router,
-    OnAction&&... on_action)
-{
-    static_assert(!IsRequest, "session::send requirements are not met");
-    context_type ctx = init_context(std::move(socket), router,
-        std::forward<OnAction>(on_action)...);
-    ctx.send(std::forward<Request>(request));
-    return ctx;
-}
-
-SESSION_TEMPLATE_DECLARE
-template <class Request, class TimeDuration, class... OnAction>
-typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
-session<SESSION_TEMPLATE_ATTRIBUTES>::send(std::piecewise_construct_t, socket_type&& socket,
-    Request&& request,
-    const router_type& router,
-    TimeDuration&& duration,
-    OnAction&&... on_action)
-{
-    static_assert(!IsRequest, "session::send requirements are not met");
-    context_type ctx = init_context(std::move(socket), router,
-        std::forward<OnAction>(on_action)...);
-    ctx.send(std::forward<Request>(request), std::forward<TimeDuration>(duration));
-    return ctx;
-}
-
-SESSION_TEMPLATE_DECLARE
-template <class... OnAction>
-typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
 session<SESSION_TEMPLATE_ATTRIBUTES>::init_context(socket_type&& socket,
     const router_type& router,
     OnAction&&... on_action)
 {
     buffer_type buffer;
     return context_type {
-        *std::make_shared<impl_type>(std::move(socket), std::move(buffer), router,
-            std::forward<OnAction>(on_action)...)
+        *std::make_shared<impl_type>(std::move(socket), std::move(buffer),
+            router, std::forward<OnAction>(on_action)...)
     };
 }
+
+#if defined(LINK_SSL)
+SESSION_TEMPLATE_DECLARE
+template <class... OnAction>
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::context_type
+session<SESSION_TEMPLATE_ATTRIBUTES>::init_context(boost::asio::ssl::context& ssl_ctx,
+    socket_type&& socket,
+    const router_type& router,
+    OnAction&&... on_action)
+{
+    buffer_type buffer;
+    return context_type {
+        *std::make_shared<impl_type>(ssl_ctx, std::move(socket), std::move(buffer),
+            router, std::forward<OnAction>(on_action)...)
+    };
+}
+#endif
 
 SESSION_TEMPLATE_DECLARE
 session<SESSION_TEMPLATE_ATTRIBUTES>::impl::impl(socket_type&& socket,
@@ -99,17 +58,35 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::impl::impl(socket_type&& socket,
     const router_type& router,
     const on_error_type& on_error)
     : base::strand_stream { socket.get_executor() }
-    , m_connection { std::move(socket),
-        static_cast<base::strand_stream&>(*this) }
+    , m_connection { std::move(socket), static_cast<base::strand_stream&>(*this) }
     , m_timer { static_cast<base::strand_stream&>(*this) }
     , m_buffer { std::move(buffer) }
-    , m_on_error { std::move(on_error) }
+    , m_on_error { on_error }
     , m_queue { *this }
     , m_serializer {}
     , m_parser {}
     , m_dispatcher { router }
 {
 }
+
+#if defined(LINK_SSL)
+SESSION_TEMPLATE_DECLARE
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::impl(boost::asio::ssl::context& ssl_ctx, socket_type&& socket,
+    buffer_type&& buffer,
+    const router_type& router,
+    const on_error_type& on_error)
+    : base::strand_stream { socket.get_executor() }
+    , m_connection { std::move(socket), ssl_ctx, static_cast<base::strand_stream&>(*this) }
+    , m_timer { static_cast<base::strand_stream&>(*this) }
+    , m_buffer { std::move(buffer) }
+    , m_on_error { on_error }
+    , m_queue { *this }
+    , m_serializer {}
+    , m_parser {}
+    , m_dispatcher { router }
+{
+}
+#endif
 
 SESSION_TEMPLATE_DECLARE
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type&
@@ -261,6 +238,55 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_write(
     m_queue.on_write();
 }
 
+#if defined(LINK_SSL)
+SESSION_TEMPLATE_DECLARE
+template <class Func>
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type&
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_handshake(Func&& func)
+{
+    auto clb = [_this = this->shared_from_this(), f = std::forward<Func>(func)](const boost::system::error_code& error) {
+        BOOST_ASSERT(_this);
+        _this->on_handshake(error);
+        if (not error and f) {
+            context_type ctx { *_this };
+            f(ctx);
+        }
+    };
+
+    if constexpr (is_request::value) {
+        m_connection.async_handshake(boost::asio::ssl::stream_base::server, std::move(clb));
+    } else {
+        m_connection.async_handshake(boost::asio::ssl::stream_base::client, std::move(clb));
+    }
+    return *this;
+}
+
+SESSION_TEMPLATE_DECLARE
+template <class Func>
+typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type&
+session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_handshake(Func&& func, timer_duration_type duration)
+{
+    m_timer.expires_from_now(std::move(duration));
+    return do_handshake(std::forward<Func>(func));
+}
+
+SESSION_TEMPLATE_DECLARE
+void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_handshake(boost::system::error_code ec)
+{
+    m_timer.cancel();
+
+    if (ec == boost::beast::http::error::end_of_stream) {
+        do_eof(shutdown_type::shutdown_both);
+        return;
+    }
+
+    if (ec && m_on_error) {
+        m_on_error(ec, "async_handshake/on_handshake");
+        return;
+    }
+}
+#endif
+
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
 session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::context(Impl& impl)
@@ -321,6 +347,33 @@ ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(
     boost::asio::dispatch(static_cast<base::strand_stream>(*m_impl),
         [impl = m_impl->shared_from_this(), msg = std::forward<Message>(message), dur = std::forward<TimeDuration>(duration)]() mutable {
             impl->send(std::forward<Message>(msg), std::forward<TimeDuration>(dur));
+        });
+}
+
+SESSION_TEMPLATE_DECLARE
+template <class Impl>
+template <class Func>
+ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::handshake(Func&& func) const
+{
+    BOOST_ASSERT(m_impl != nullptr);
+    boost::asio::dispatch(static_cast<base::strand_stream>(*m_impl),
+        [impl = m_impl->shared_from_this(), f = std::forward<Func>(func)]() mutable {
+            impl->do_handshake(std::forward<Func>(f));
+        });
+}
+
+SESSION_TEMPLATE_DECLARE
+template <class Impl>
+template <class Func, class TimeDuration>
+ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::handshake(Func&& func, TimeDuration&& duration) const
+{
+    static_assert(utility::is_chrono_duration_v<TimeDuration>,
+        "TimeDuration requirements are not met");
+
+    BOOST_ASSERT(m_impl != nullptr);
+    boost::asio::dispatch(static_cast<base::strand_stream>(*m_impl),
+        [impl = m_impl->shared_from_this(), f = std::forward<Func>(func), dur = std::forward<TimeDuration>(duration)]() mutable {
+            impl->do_handshake(std::forward<Func>(f), std::forward<TimeDuration>(dur));
         });
 }
 

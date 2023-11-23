@@ -1,96 +1,125 @@
 #include "beast_router.hpp"
 #include <atomic>
+#include <iostream>
 #include <sstream>
 #include <string_view>
+#include <exception>
+
+using namespace std::chrono_literals;
 
 /// requests counter
 static std::atomic<uint64_t> counter { 0 };
 
-/// SSL Context
-boost::asio::ssl::context ctx { boost::asio::ssl::context::tlsv12 };
+/// ip address
+static const auto address = boost::asio::ip::address_v4::any();
 
-static const std::string_view crt {
+/// port to start listening on
+static const auto port = static_cast<unsigned short>(8080);
+
+/// SSL Context
+boost::asio::ssl::context ctx { boost::asio::ssl::context::sslv23_server };
+
+/// Declare CA certificate
+static const std::string_view ca_cert = {
     "-----BEGIN CERTIFICATE-----\n"
-    "MIIDCTCCAfGgAwIBAgIUQYN2nva8NiEaXPsuSvIYI3szEcowDQYJKoZIhvcNAQEL\n"
-    "BQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTIzMDQwNTExMTAzN1oXDTI3MDQw\n"
-    "NTExMTAzN1owFDESMBAGA1UEAwwJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEF\n"
-    "AAOCAQ8AMIIBCgKCAQEAqXNjFyU8CcMe/5QATqNj0XcBy+Wq0jMEXdpPUBs3Ra8e\n"
-    "J8Xc8o4j2agP3UzPAJYj6R6Iu+9pMa953wscnSVyjj0c38m+u3+KhZQjLe4OW463\n"
-    "VxkNICJ6THZNLpGyuA7zGa1me2Iixi9FNpTC0LYm81AivfuCXKnQsdmpR4gd4lVP\n"
-    "0U8x3h/+5XIQkJzLb9t3cFtv1koyf8SfWWJ/q7gJ/Ybtp/IME/2KPKdQwvhDIqMR\n"
-    "/axGXR3tv/oMHiC3pmfXN4sZylgzF4KpzWnI0y4pRzKEZTEsPELFEn3fFCWqMtaM\n"
-    "DUVNWkQ9OWKhuIBG67emikVxQkQ6BYS2UrQFlSjGZwIDAQABo1MwUTAdBgNVHQ4E\n"
-    "FgQUy/C4lnRqzXm+96mOabNCw5Hwir0wHwYDVR0jBBgwFoAUy/C4lnRqzXm+96mO\n"
-    "abNCw5Hwir0wDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAULY5\n"
-    "Yv5tI1klCLyC/uXLxUVrdaN/87vpxxveDLll2PkGZd8eVkAVht8GbkpLIBZ7nwjc\n"
-    "NYdZpXb5lFGQ9JSoVcX7FtmPAC9Mh9mmrL2AbHyMSjGppuO7MhMbOYp/lA2XUUhA\n"
-    "jvQmw34qGTyAMX7eOmiJWG17vwOu8Y1TFLGoVBmf8+DYPCR/0dIXAnIBQHdSUFmT\n"
-    "ymYouMNF6Kzqlhx0qwyboo4RJmkLlXHCEzbzUs1zsXNRvHocbUc2h9dBTknVB4E7\n"
-    "db9Xw/yL+I34QqP7RNjk4yyORJewA3NEG6FNSya26VJGVbdPtJefEFWMgh/nDoub\n"
-    "yjRQO4WksELUf4MXUg==\n"
+    "MIIDazCCAlOgAwIBAgIUdnC0zJGGH5SSCEhn5Am426LdtugwDQYJKoZIhvcNAQEL\n"
+    "BQAwRTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoM\n"
+    "GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAeFw0yMzExMjMxMzE4MjlaFw0yMzEy\n"
+    "MjMxMzE4MjlaMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEw\n"
+    "HwYDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwggEiMA0GCSqGSIb3DQEB\n"
+    "AQUAA4IBDwAwggEKAoIBAQCyfUR8po/n7+47hIf7MY23eDv71SUibE5iDycJvVXz\n"
+    "wHKVPP8erZ2DUoNgYa+9dHkV9vPlV3w9gwas/PlBWctAdE4yTtowqCHsvhrKCyP2\n"
+    "2cKJZ4DqrPBjjSJcyydAgn53GPcwIVqRyolpzJp+qFtiGq/zxd8Rk/FqcSkrWh2U\n"
+    "OEK1f7xN5tUZ0VzPzoj7BgYxDo7UIfXtG5VxDljS56PC7IKx/g6PnDeG/rhDTMXX\n"
+    "k2/5XrtR98C1Jz1UFw+HeZoAP0RM1pvW+f1FwuMl2zl3LUG4EYqJfYpxs/wLI95/\n"
+    "VxM+iDumJ8Ry4eyP7qrz+fYYyDYftAdcdkjmpq+qziyDAgMBAAGjUzBRMB0GA1Ud\n"
+    "DgQWBBTSOmCJAOVF4DBsTouZ0Xv/N0yedDAfBgNVHSMEGDAWgBTSOmCJAOVF4DBs\n"
+    "TouZ0Xv/N0yedDAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQAk\n"
+    "Y3XNcfU9jlwz33PxAmsUhr+kfH7fQ7EnrcUAzOGJ5tkWx+icXtWPthzip1UTp/FK\n"
+    "9/HIcFTq6D4bP8j2ULMe/308+41inOCBRiMTul7sYR4Z2Le5kyzKXlWkbw3rjuS5\n"
+    "8tx7Tab45ulXVd9geZI/55fmjFvGftRlHItdjH/ZvHyeTgAgtSbfVv+Ty6Ia7N92\n"
+    "x+t5lEyyiP7/Rls9830Q/LkoIW11L7XqDqLn+u1YzbyEASuL/CXDP3syIRO9zNkq\n"
+    "9gm1XJHb5rMn1SDJEpjxD28WtSaH67Gmd/XHDwCwwrDKuRTrsK/MUywh1eKB/hpj\n"
+    "ROHtZA681nCoDpuBMp63\n"
     "-----END CERTIFICATE-----\n"
 };
 
-static const std::string_view key {
-    "-----BEGIN PRIVATE KEY-----\n"
-    "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCpc2MXJTwJwx7/\n"
-    "lABOo2PRdwHL5arSMwRd2k9QGzdFrx4nxdzyjiPZqA/dTM8AliPpHoi772kxr3nf\n"
-    "CxydJXKOPRzfyb67f4qFlCMt7g5bjrdXGQ0gInpMdk0ukbK4DvMZrWZ7YiLGL0U2\n"
-    "lMLQtibzUCK9+4JcqdCx2alHiB3iVU/RTzHeH/7lchCQnMtv23dwW2/WSjJ/xJ9Z\n"
-    "Yn+ruAn9hu2n8gwT/Yo8p1DC+EMioxH9rEZdHe2/+gweILemZ9c3ixnKWDMXgqnN\n"
-    "acjTLilHMoRlMSw8QsUSfd8UJaoy1owNRU1aRD05YqG4gEbrt6aKRXFCRDoFhLZS\n"
-    "tAWVKMZnAgMBAAECggEADBu1qfK8Loplzad6uiPMvyv80eAQa8K/fiFaZ4P6WB1i\n"
-    "Tz9BQYfMogHzWEHjzMvttvu6k4tQ/f7m+3wkyEnjvKw7QvZ8jZNYh6EFPoPzPLGf\n"
-    "AjdFC9XK3WnarAg3OBXBY0VTvF9P0s+P542LujQ55ksEoIS3VP3BbuP5x6W/VOvb\n"
-    "rUjcYxUFr9OK8LShmnmisrE+ntRqlnqr4tmOZ1s5Qmw5Hy5eV7i2Ie0fLc+ingmF\n"
-    "19j+E1mIo66Cv+7UeqQSRHkk1XpiehgtmExqRp4WsfVT37r18FSlSx1wTmrwczsf\n"
-    "H9wxYgGszQk2HtyOfW/CqXzn+NmndPXl+GGRQoDxuQKBgQC3XBjr7gMCKoRmY2DJ\n"
-    "NmKpoODVqHdwIXq0HByx8BJq3AFHBYd+iDgOaNQmfozhPZFoGUxf0VSCkLZZS2PB\n"
-    "8ajGGsw1Q7fs1mJTO9349EzZEPotSfHdyk3YhJfFRRbiSYBxB2xMlp4Mw6nD9cOt\n"
-    "IYdmHGvhsCun8zW1l2hsyGCZ5QKBgQDslKuMn7tr38K1zpOfAA9KGkPPXWFqCLj6\n"
-    "2GPbIYJ+E9RJBkOMLKZjB2pdcCmKlYXHxidFX11mTr5mUkvjbAK/hWiBAAbido29\n"
-    "zmN97L7NVtq09udQA7fwAuX37IJaBh0t1DGaXUHHWnF20iuNmYWwXwEdHSGu2Mff\n"
-    "bMQLmCCqWwKBgF3G3oAbtLIw6JItFV0TUZaLzzG2/Y79sHHZRtvCesjoSEb4jvmp\n"
-    "1XGZL5eYdZjlEi75cVQ4DU7RkFFO+3A/lh/rqLE9Nx4L7zG+lqIy3/LMegcboHXc\n"
-    "d7/a4Hxl/3QwP16Pe1YYWjERCQxN74vmcAdLVemRXmKBQuDi1Od9+9n5AoGAAqkV\n"
-    "WMp/EBJ/HQ5KqLIWee3br1xMeSXJ9sAyN0ekMQjGDWAtqEjkQh7WOmDFhtJxo7J9\n"
-    "xJDy+vCNwZbRVahkS4UTjMfUS/2rUGQeyE6+Qo7kfL5+EW9JRUCzF1uoh5yj/Vzy\n"
-    "hdrgn35L4lswtDHyx+35lDs8oru7W67ccYjvbRsCgYBMxuAvIX5x8O8ASu9jYmeD\n"
-    "stDQ9sAN9ro8VFLnISFu1RFOZT4PvtE7g4QJ3dxFteOjVL6IsKq1AQa6uGwqhSSc\n"
-    "oK5vEFDz7pMPYY3cXbTvkUcbo+1+fBFpEI7cTlVrXPCtD4DU79Cfo8T34+Kd742c\n"
-    "UIWzbbHq3NLdPR14/h44Zg==\n"
-    "-----END PRIVATE KEY-----\n"
-};
-
-static const std::string_view dh {
-    "-----BEGIN DH PARAMETERS-----\n"
-    "MIIBCAKCAQEAlXNFQg0bN3WPxrDTMaPwAX8aZb1lkMQvrB/C1t4Rc7Two1//+y2g\n"
-    "UDN1cowlXqcNNGBZR+hqpPNNhsodK3pY1IA5MuCCj6qJV72cpTXJtucJASuYf5IB\n"
-    "+IDA6ICLRsQXOuVdXvGHEorL5QZdIqxrFFynrU0P7JpfbhzbHV8eLa3lmclxmnyY\n"
-    "4ji20eYQhnZ3CFKOtFGZ8rUnFKhJWVnwT8Q3ult6m19L0/q1JFQPnXbJQtrHUEaY\n"
-    "vUaqoqEiZJaKG5ZnLaRJQiz2XPLKuelcVb6SJvXutcztzIVVKHESZiKA+t/9KZV3\n"
-    "jCk7TXj7aTxTKQB+3A8OxRMM0etrCQM7NwIBAg==\n"
-    "-----END DH PARAMETERS-----\n"
+/// Declare Key content
+static const std::string_view ca_key = {
+    "-----BEGIN RSA PRIVATE KEY-----\n"
+    "MIIEogIBAAKCAQEAsn1EfKaP5+/uO4SH+zGNt3g7+9UlImxOYg8nCb1V88BylTz/\n"
+    "Hq2dg1KDYGGvvXR5Ffbz5Vd8PYMGrPz5QVnLQHROMk7aMKgh7L4aygsj9tnCiWeA\n"
+    "6qzwY40iXMsnQIJ+dxj3MCFakcqJacyafqhbYhqv88XfEZPxanEpK1odlDhCtX+8\n"
+    "TebVGdFcz86I+wYGMQ6O1CH17RuVcQ5Y0uejwuyCsf4Oj5w3hv64Q0zF15Nv+V67\n"
+    "UffAtSc9VBcPh3maAD9ETNab1vn9RcLjJds5dy1BuBGKiX2KcbP8CyPef1cTPog7\n"
+    "pifEcuHsj+6q8/n2GMg2H7QHXHZI5qavqs4sgwIDAQABAoIBAFyTrJoaqjlasO4d\n"
+    "54naQe8PZc1Q2FnqYx1pTo42rgYno0bUxF5dHn2mpo2vHT/e0Y8a75XcsowVEblX\n"
+    "3NCQimN777MYQwNJsY7ha3OwI489kzFBhhQybtyzr0cB9/H1vTJ4uH02T4ueyXce\n"
+    "sGNRX1SbEvgVgYXUfjr/RqM9smnVhjlaF0QeU9N0KA9/NbdQ2jqj0qQoXppo334Z\n"
+    "E8AsXK7xsZeJNUwQBkZ+zzjS6V1WndMEYNFx6yppuznBb4KfmsIoDWTNJ9ZQBrof\n"
+    "19ukowoIzh1kTsdKBC60XjrdHG5N9fuifZpS/WdpiutotvPIA1ZJ6Us7zZJ0Y5be\n"
+    "6EB8WoECgYEA5VJ3P6xW5LAZqEYxOJ6r/BKAoIILhF1OTsLRVyAA5IRzbAGXl0pL\n"
+    "EX0bTibIJyI7LEob1F0PglZvjmTFaTqn1CZ9HFBE8XMfYbY8E30i4spxSc/LNWd4\n"
+    "Ub2kwROWvatJQqKi+LnvstkfLvbMfCLDGU0B0G46J71xrNM9QM9zFUkCgYEAx0Dt\n"
+    "+PByatOTeAUCy4WSuP9Ms4Ru/VHPIScnmqmura/BFSxuzd6sDCR69YgMGsKZjQ5g\n"
+    "8BIbipz6hI2elCJpFDjPmGAkZfsUxUweQ26qfbn1zoeOXAjUg4cb91AIV/26hI/m\n"
+    "/9Qszdy0r1eOAvtlj/2fPPxywg1CgCfgu8zND2sCgYBcH/z3/2wJAxXLnCc578R3\n"
+    "x5cU5ClsS2+iBHHE5n51TyBvS1Ry2s29gNzvUHUoA4ByEnOLpLcOTVsTgTgtRfsW\n"
+    "J0Arl7Oaq/z3bBZGXgcdxOYuGOQx2Bdl/yGozw3HtIAB3QRLl6bL2p3EaDFNzUlD\n"
+    "aMRJz35daKW6IEKDPtOkwQKBgBe6ztyP3kCEtBJeHmgYn1Gy7fKPOhynKpDbNedA\n"
+    "gBIlVUxtP0D7XOgRTCeDrVVeiaT36mmM7oTCjz9MEm+37WXAIlEWWh9fGKkqmIwV\n"
+    "WO6iP/j5weWKE60aYSVB/cxk5lq1PKCJJ1DZERe0yK/oOr88SEOeGRitNZdHqIcV\n"
+    "K/LDAoGAMp/Td9Zoj4H22CYhJjDOg5VWeAtR9wHi1tKdZ2HmeNOqqjUVjE3/at5K\n"
+    "YokdPDRXuatl8grDkqJeyCHP5b6HrkdXWk2DxPq9mpTpfA6nrL5c5W4Jwp7VrjHF\n"
+    "2PyfPp8s0xqHZ8Q1vYakzTvYpX+mcOmqYWH9JdtXJkD9/u8nM+0=\n"
+    "-----END RSA PRIVATE KEY-----\n"
 };
 
 int main(int, char**)
 {
+    /// Prepare ssl context
+    ctx.set_options(boost::asio::ssl::context::default_workarounds
+        | boost::asio::ssl::context::sslv23
+        | boost::asio::ssl::context::no_sslv2);
+    ctx.use_certificate_chain({ ca_cert.data(), ca_cert.size() });
+    ctx.use_private_key({ ca_key.data(), ca_key.size() },
+        boost::asio::ssl::context::pem);
 
-    ctx.set_options(boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2 | boost::asio::ssl::context::single_dh_use);
-    ctx.use_certificate_chain({ crt.data(), crt.size() });
-    ctx.use_private_key({ key.data(), key.size() }, boost::asio::ssl::context::file_format::pem);
-    return 0;
-    /* return beast_router::http_server()
-        .on_get(R"(^.*$)", [](const auto& rq, auto& ctx) {
-            std::stringstream i_str;
-            i_str << "Hello World: the request was triggered [" << ++counter
-                  << "] times";
+    /// routing table
+    beast_router::ssl::http_server_type::router_type router {};
 
-            auto rp = beast_router::make_string_response(beast_router::http::status::ok, rq.version(), i_str.str());
-            rp.keep_alive(rq.keep_alive());
+    /// Add the callback and link to index ("/") requests patterns
+    router.get(R"(^/$)", [](const beast_router::ssl::http_server_type::message_type& rq, beast_router::ssl::http_server_type::context_type& ctx) {
+        const auto now = std::chrono::system_clock::now();
+        const std::time_t t_c = std::chrono::system_clock::to_time_t(now);
+        std::cout << "Received RQ. at " << std::ctime(&t_c);
 
-            ctx.send(std::move(rp));
-        })
-        .exec(); */
-    return 0;
+        std::stringstream i_str;
+        i_str << "Hello World: the request was triggered [" << ++counter
+              << "] times";
+        auto rp = beast_router::make_string_response(beast_router::http::status::ok, rq.version(), i_str.str());
+        rp.keep_alive(rq.keep_alive());
+
+        ctx.send(std::move(rp));
+    });
+
+    /// Create event loop to serve the io context
+    auto event_loop = beast_router::event_loop::create();
+
+    /// Define callbacks for the listener
+    beast_router::http_listener_type::on_error_type on_error = [event_loop](boost::system::error_code ec,
+                                                                   std::string_view msg) {
+        throw std::runtime_error(ec.message());
+    };
+
+    beast_router::http_listener_type::on_accept_type on_accept = [&router, ssl_ctx = std::ref(ctx), &on_error](beast_router::http_listener_type::socket_type socket) {
+        beast_router::ssl::http_server_type::recv(std::piecewise_construct, ssl_ctx, std::move(socket), router,
+            1s, on_error);
+    };
+
+    /// Start listening
+    beast_router::http_listener_type::launch(*event_loop, { address, port }, std::move(on_accept), std::move(on_error));
+
+    /// Start serving
+    return event_loop->exec();
 }

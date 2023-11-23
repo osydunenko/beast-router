@@ -51,7 +51,7 @@ struct is_class_creatable {
     static auto test(int) -> decltype(C { std::declval<A>()... }, one());
 
     template <class C, class... A>
-    static char (&test(...))[2];
+    static long test(...);
 
     enum { value = sizeof(test<Class, Args...>(0) == sizeof(one)) };
 };
