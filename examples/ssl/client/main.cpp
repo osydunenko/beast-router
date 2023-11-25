@@ -4,6 +4,9 @@
 
 using namespace std::chrono_literals;
 
+/// SSL Context
+boost::asio::ssl::context ctx { boost::asio::ssl::context::tlsv12 };
+
 int main(int, char**)
 {
     /// Create event loop
@@ -16,11 +19,10 @@ int main(int, char**)
         req.set(beast_router::http::field::user_agent, "curl");
         req.set(beast_router::http::field::accept, "*/*");
 
-
         /// routing table
-        beast_router::http_client_type::router_type router;
-        router.handle_response([event_loop](const beast_router::http_client_type::message_type& rp,
-                                   beast_router::http_client_type::context_type&) {
+        beast_router::ssl::http_client_type::router_type router;
+        router.handle_response([event_loop](const beast_router::ssl::http_client_type::message_type& rp,
+                                   beast_router::ssl::http_client_type::context_type&) {
             /// Print the received data and stop the loop
             std::cout << rp << std::endl;
             event_loop->stop();
@@ -34,8 +36,8 @@ int main(int, char**)
         };
 
         /// Send the request
-        beast_router::http_client_type::send(std::piecewise_construct, std::move(socket), std::move(req), router,
-            1s, std::move(on_error))
+        beast_router::ssl::http_client_type::send(ctx, std::move(socket), std::move(req), router,
+            std::move(on_error))
             .recv(1s);
     };
 
@@ -46,7 +48,7 @@ int main(int, char**)
     };
 
     /// Connect to the host and send the request
-    beast_router::http_connector_type::connect(*event_loop, "wttr.in", "80",
+    beast_router::http_connector_type::connect(*event_loop, "wttr.in", "443",
         std::move(on_connect), std::move(on_error));
 
     /// Start serving

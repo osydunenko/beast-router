@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 ROUTER_NAMESPACE_BEGIN()
 
 template <bool IsRequest, class Body>
@@ -139,11 +141,17 @@ void session<SESSION_TEMPLATE_ATTRIBUTES>::impl::on_timer(
     boost::system::error_code ec)
 {
     if (ec && ec != boost::asio::error::operation_aborted) {
-        m_on_error(ec, "async_timer/on_timer");
+        if (m_on_error) {
+            m_on_error(ec, "async_timer/on_timer");
+        }
         return;
     }
 
     if (m_timer.expiry() <= timer_type::clock_type::now()) {
+        if (m_on_error) {
+            auto ec = make_error_code(boost::asio::error::timed_out);
+            m_on_error(ec, "async_timer/on_timer");
+        }
         do_eof(shutdown_type::shutdown_both);
     }
 }
@@ -247,7 +255,7 @@ session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_handshake(Func&& func)
     auto clb = [_this = this->shared_from_this(), f = std::forward<Func>(func)](const boost::system::error_code& error) {
         BOOST_ASSERT(_this);
         _this->on_handshake(error);
-        if (not error and f) {
+        if (not error) {
             context_type ctx { *_this };
             f(ctx);
         }
@@ -308,10 +316,12 @@ ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv()
 SESSION_TEMPLATE_DECLARE
 template <class Impl>
 template <class TimeDuration>
-ROUTER_DECL typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
-session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(
+ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::recv(
     TimeDuration&& duration)
 {
+    /*static_assert(utility::is_chrono_duration_v<TimeDuration>,
+        "TimeDuration requirements are not met");*/
+
     BOOST_ASSERT(m_impl != nullptr);
     boost::asio::dispatch(
         static_cast<base::strand_stream>(*m_impl),
@@ -329,8 +339,8 @@ ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(
 {
     BOOST_ASSERT(m_impl != nullptr);
     boost::asio::dispatch(static_cast<base::strand_stream>(*m_impl),
-        [impl = m_impl->shared_from_this(), msg = std::forward<Message>(message)]() mutable {
-            impl->send(std::forward<Message>(msg));
+        [impl = m_impl->shared_from_this(), msg = std::move(message)]() mutable {
+            impl->send(std::move(msg));
         });
 }
 
@@ -345,8 +355,8 @@ ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::send(
 
     BOOST_ASSERT(m_impl != nullptr);
     boost::asio::dispatch(static_cast<base::strand_stream>(*m_impl),
-        [impl = m_impl->shared_from_this(), msg = std::forward<Message>(message), dur = std::forward<TimeDuration>(duration)]() mutable {
-            impl->send(std::forward<Message>(msg), std::forward<TimeDuration>(dur));
+        [impl = m_impl->shared_from_this(), msg = std::move(message), dur = std::move(duration)]() mutable {
+            impl->send(std::move(msg), std::move(dur));
         });
 }
 
@@ -355,10 +365,13 @@ template <class Impl>
 template <class Func>
 ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::handshake(Func&& func) const
 {
+    static_assert(std::is_invocable_v<Func, context_type&>,
+        "Func requirements are not met");
+
     BOOST_ASSERT(m_impl != nullptr);
     boost::asio::dispatch(static_cast<base::strand_stream>(*m_impl),
-        [impl = m_impl->shared_from_this(), f = std::forward<Func>(func)]() mutable {
-            impl->do_handshake(std::forward<Func>(f));
+        [impl = m_impl->shared_from_this(), f = std::move(func)]() mutable {
+            impl->do_handshake(std::move(f));
         });
 }
 
@@ -369,11 +382,13 @@ ROUTER_DECL void session<SESSION_TEMPLATE_ATTRIBUTES>::context<Impl>::handshake(
 {
     static_assert(utility::is_chrono_duration_v<TimeDuration>,
         "TimeDuration requirements are not met");
+    static_assert(std::is_invocable_v<Func, context_type&>,
+        "Func requirements are not met");
 
     BOOST_ASSERT(m_impl != nullptr);
     boost::asio::dispatch(static_cast<base::strand_stream>(*m_impl),
-        [impl = m_impl->shared_from_this(), f = std::forward<Func>(func), dur = std::forward<TimeDuration>(duration)]() mutable {
-            impl->do_handshake(std::forward<Func>(f), std::forward<TimeDuration>(dur));
+        [impl = m_impl->shared_from_this(), f = std::move(func), dur = std::move(duration)]() mutable {
+            impl->do_handshake(std::move(f), std::move(dur));
         });
 }
 

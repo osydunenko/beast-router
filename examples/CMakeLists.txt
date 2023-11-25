@@ -24,4 +24,5 @@ add_subdirectory(client)
 
 if (LINK_SSL)
     add_subdirectory(ssl/hello-world)
+    add_subdirectory(ssl/client)
 endif()

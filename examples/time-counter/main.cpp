@@ -1,11 +1,11 @@
 #include "beast_router.hpp"
 #include "config_ex.hpp"
 #include <chrono>
+#include <exception>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string_view>
-#include <exception>
 
 using namespace std::chrono_literals;
 

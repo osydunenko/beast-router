@@ -96,13 +96,13 @@ public:
 
     /// Indicates if session serves as a server or a client
 #if ROUTER_DOXYGEN
-    using is_request = std::integral_constant<bool, IsRequest>;
+    using is_request = std::integral_constant<bool, is_request>;
 #else
     using is_request = std::conditional_t<IsRequest, std::true_type, std::false_type>;
 #endif
 
     /// The self type
-    using self_type = session<IsRequest, Body, Buffer, Protocol, Socket, Connection>;
+    using self_type = session<is_request::value, Body, Buffer, Protocol, Socket, Connection>;
 
     /// The body type associated with the message_type
     using body_type = Body;
@@ -111,7 +111,7 @@ public:
 #if ROUTER_DOXYGEN
     using message_type = boost::beast::http::message<is_request, body_type, Fields>;
 #else
-    using message_type = std::conditional_t<IsRequest, boost::beast::http::request<body_type>,
+    using message_type = std::conditional_t<is_request::value, boost::beast::http::request<body_type>,
         boost::beast::http::response<body_type>>;
 #endif
 
@@ -177,7 +177,7 @@ public:
         OnAction&&... on_action)
         -> decltype(not is_ssl_context_v, context_type())
     {
-        static_assert(IsRequest, "session::recv requirements are not met");
+        static_assert(is_request::value, "session::recv requirements are not met");
         context_type ctx = init_context(std::move(socket), router,
             std::forward<OnAction>(on_action)...);
         ctx.recv();
@@ -201,7 +201,7 @@ public:
         TimeDuration&& duration, OnAction&&... on_action)
         -> decltype(not is_ssl_context_v, context_type())
     {
-        static_assert(IsRequest, "session::recv requirements are not met");
+        static_assert(is_request::value, "session::recv requirements are not met");
         context_type ctx = init_context(std::move(socket), router,
             std::forward<OnAction>(on_action)...);
         ctx.recv(std::forward<TimeDuration>(duration));
@@ -224,7 +224,7 @@ public:
         const router_type& router, OnAction&&... on_action)
         -> decltype(not is_ssl_context_v, context_type())
     {
-        static_assert(!IsRequest, "session::send requirements are not met");
+        static_assert(not is_request::value, "session::send requirements are not met");
         context_type ctx = init_context(std::move(socket), router,
             std::forward<OnAction>(on_action)...);
         ctx.send(std::forward<Request>(request));
@@ -249,7 +249,7 @@ public:
         const router_type& router, TimeDuration&& duration, OnAction&&... on_action)
         -> decltype(not is_ssl_context_v, context_type())
     {
-        static_assert(!IsRequest, "session::send requirements are not met");
+        static_assert(not is_request::value, "session::send requirements are not met");
         context_type ctx = init_context(std::move(socket), router,
             std::forward<OnAction>(on_action)...);
         ctx.send(std::forward<Request>(request), std::forward<TimeDuration>(duration));
@@ -262,7 +262,7 @@ public:
         socket_type&& socket, const router_type& router, OnAction&&... on_action)
         -> decltype(is_ssl_context_v, context_type())
     {
-        static_assert(IsRequest, "session::recv requirements are not met");
+        static_assert(is_request::value, "session::recv requirements are not met");
         context_type ctx = init_context(ssl_ctx, std::move(socket), router,
             std::forward<OnAction>(on_action)...);
         ctx.handshake([](context_type& ctx) { ctx.recv(); });
@@ -275,10 +275,42 @@ public:
         OnAction&&... on_action)
         -> decltype(is_ssl_context_v, context_type())
     {
-        static_assert(IsRequest, "session::recv requirements are not met");
+        static_assert(is_request::value, "session::recv requirements are not met");
         context_type ctx = init_context(ssl_ctx, std::move(socket), router,
             std::forward<OnAction>(on_action)...);
-        ctx.handshake([](context_type& ctx) { ctx.recv(); });
+        ctx.handshake([dur = std::move(duration)](context_type& ctx) { 
+            ctx.recv(std::move(dur));
+        });
+        return ctx;
+    }
+
+    template <class Request, class... OnAction>
+    static auto send(boost::asio::ssl::context& ssl_ctx,
+        socket_type&& socket, Request&& request,
+        const router_type& router, OnAction&&... on_action)
+        -> decltype(not is_ssl_context_v, context_type())
+    {
+        static_assert(not is_request::value, "session::send requirements are not met");
+        context_type ctx = init_context(ssl_ctx, std::move(socket), router,
+            std::forward<OnAction>(on_action)...);
+        ctx.handshake([rq = std::move(request)](context_type& ctx) {
+            ctx.send(std::move(rq));
+        });
+        return ctx;
+    }
+
+    template <class Request, class TimeDuration, class... OnAction>
+    static auto send(std::piecewise_construct_t, boost::asio::ssl::context& ssl_ctx,
+        socket_type&& socket, Request&& request,
+        const router_type& router, TimeDuration&& duration, OnAction&&... on_action)
+        -> decltype(not is_ssl_context_v, context_type())
+    {
+        static_assert(not is_request::value, "session::send requirements are not met");
+        context_type ctx = init_context(ssl_ctx, std::move(socket), router,
+            std::forward<OnAction>(on_action)...);
+        ctx.handshake([rq = std::move(request), dur = std::move(duration)](context_type& ctx) { 
+            ctx.send(std::move(rq), std::move(dur));
+        });
         return ctx;
     }
 #endif
@@ -311,7 +343,7 @@ private:
     public:
         using self_type = impl;
 
-        using parser_type = std::conditional_t<IsRequest, request_parser_type,
+        using parser_type = std::conditional_t<is_request::value, request_parser_type,
             response_parser_type>;
 
         explicit impl(socket_type&& socket, buffer_type&& buffer,
@@ -404,13 +436,7 @@ public:
          * @returns void
          */
         template <class TimeDuration>
-#if ROUTER_DOXYGEN
-        void
-#else
-        typename std::enable_if_t<utility::is_chrono_duration_v<TimeDuration>>
-#endif
-            ROUTER_DECL
-            recv(TimeDuration&& duration);
+        ROUTER_DECL void recv(TimeDuration&& duration);
 
         /// The overloaded method does send data back to client
         /**

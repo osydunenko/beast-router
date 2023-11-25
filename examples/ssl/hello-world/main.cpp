@@ -1,9 +1,9 @@
 #include "beast_router.hpp"
 #include <atomic>
+#include <exception>
 #include <iostream>
 #include <sstream>
 #include <string_view>
-#include <exception>
 
 using namespace std::chrono_literals;
 
