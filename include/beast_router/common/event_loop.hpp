@@ -79,9 +79,14 @@ public:
     static ROUTER_DECL auto create(Args&&... args)
         -> decltype(event_loop { std::declval<Args>()... }, event_loop_ptr_type());
 
+    /// The static cast operator reterns the current context
+    /**
+     * @returns boost::asio::io_context&
+    */
+    ROUTER_DECL operator boost::asio::io_context&() { return m_ioc; }
+
 protected:
     event_loop(threads_num_type threads = 0u);
-    ROUTER_DECL operator boost::asio::io_context&() { return m_ioc; }
 
 private:
     threads_num_type m_threads_num;
