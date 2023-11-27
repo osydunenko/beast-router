@@ -16,7 +16,6 @@ int main(int, char**)
         req.set(beast_router::http::field::user_agent, "curl");
         req.set(beast_router::http::field::accept, "*/*");
 
-
         /// routing table
         beast_router::http_client_type::router_type router;
         router.handle_response([event_loop](const beast_router::http_client_type::message_type& rp,

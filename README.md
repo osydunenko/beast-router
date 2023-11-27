@@ -9,7 +9,6 @@
 	- [Documentation](#documentation)
 	- [Building](#building)
 	- [Usage](#usage)
-	- [Limitations](#limitations)
 
 <div id="synopsis" />
 
@@ -78,9 +77,3 @@ target_link_libraries(
 ## Usage
 
 The examples which you can build and run are in the `example` directory -- [Link](https://github.com/osydunenko/beast-router/tree/main/examples)
-
-<div id="limitations" />
-
-## Limitations
-- WebSocket support
-- TLS/Secure sockets

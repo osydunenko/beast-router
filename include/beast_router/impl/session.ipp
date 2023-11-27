@@ -1,7 +1,5 @@
 #pragma once
 
-#include <iostream>
-
 ROUTER_NAMESPACE_BEGIN()
 
 template <bool IsRequest, class Body>
@@ -252,11 +250,11 @@ template <class Func>
 typename session<SESSION_TEMPLATE_ATTRIBUTES>::impl::self_type&
 session<SESSION_TEMPLATE_ATTRIBUTES>::impl::do_handshake(Func&& func)
 {
-    auto clb = [_this = this->shared_from_this(), f = std::forward<Func>(func)](const boost::system::error_code& error) {
-        BOOST_ASSERT(_this);
-        _this->on_handshake(error);
+    auto clb = [impl = this->shared_from_this(), f = std::forward<Func>(func)](const boost::system::error_code& error) {
+        BOOST_ASSERT(impl);
+        impl->on_handshake(error);
         if (not error) {
-            context_type ctx { *_this };
+            context_type ctx { *impl };
             f(ctx);
         }
     };

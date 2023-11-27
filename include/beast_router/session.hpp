@@ -101,9 +101,6 @@ public:
     using is_request = std::conditional_t<IsRequest, std::true_type, std::false_type>;
 #endif
 
-    /// The self type
-    using self_type = session<is_request::value, Body, Buffer, Protocol, Socket, Connection>;
-
     /// The body type associated with the message_type
     using body_type = Body;
 
@@ -124,17 +121,20 @@ public:
     /// The socket type
     using socket_type = Socket;
 
+    /// The connection type
+    using connection_type = Connection;
+
+    /// The self type
+    using self_type = session<is_request::value, body_type, buffer_type, protocol_type, socket_type, connection_type>;
+
     /// The mutex type
     using mutex_type = base::lockable::mutex_type;
 
-    /// The internal `impl` type
+    /// The internal impl type
     using impl_type = impl;
 
     /// The context type
     using context_type = context<impl_type>;
-
-    /// The connection type
-    using connection_type = Connection;
 
     /// The stream type
     using stream_type = typename connection_type::stream_type;
@@ -278,7 +278,7 @@ public:
         static_assert(is_request::value, "session::recv requirements are not met");
         context_type ctx = init_context(ssl_ctx, std::move(socket), router,
             std::forward<OnAction>(on_action)...);
-        ctx.handshake([dur = std::move(duration)](context_type& ctx) { 
+        ctx.handshake([dur = std::move(duration)](context_type& ctx) {
             ctx.recv(std::move(dur));
         });
         return ctx;
@@ -308,7 +308,7 @@ public:
         static_assert(not is_request::value, "session::send requirements are not met");
         context_type ctx = init_context(ssl_ctx, std::move(socket), router,
             std::forward<OnAction>(on_action)...);
-        ctx.handshake([rq = std::move(request), dur = std::move(duration)](context_type& ctx) { 
+        ctx.handshake([rq = std::move(request), dur = std::move(duration)](context_type& ctx) {
             ctx.send(std::move(rq), std::move(dur));
         });
         return ctx;
@@ -455,23 +455,6 @@ public:
         template <class Message, class TimeDuration>
         ROUTER_DECL void send(Message&& message, TimeDuration&& duration) const;
 
-        /// The method executes handshake in SSL context
-        /**
-         * @param func Callback on success accepts `self_type` as a reference
-         * @returns void
-         */
-        template <class Func>
-        ROUTER_DECL void handshake(Func&& func) const;
-
-        /// The method executes handshake in SSL context
-        /**
-         * @param func Callback on success accepts `self_type` as a reference
-         * @param duration A time duration used by the timer
-         * @returns void
-         */
-        template <class Func, class TimeDuration>
-        ROUTER_DECL void handshake(Func&& func, TimeDuration&& duration) const;
-
         /// Obtains the state of the connection
         /**
          * @returns bool
@@ -507,6 +490,23 @@ public:
         ROUTER_DECL typename connection_type::stream_type& get_stream();
 
     private:
+        /// The method executes handshake in SSL context
+        /**
+         * @param func Callback on success accepts `self_type` as a reference
+         * @returns void
+         */
+        template <class Func>
+        ROUTER_DECL void handshake(Func&& func) const;
+
+        /// The method executes handshake in SSL context
+        /**
+         * @param func Callback on success accepts `self_type` as a reference
+         * @param duration A time duration used by the timer
+         * @returns void
+         */
+        template <class Func, class TimeDuration>
+        ROUTER_DECL void handshake(Func&& func, TimeDuration&& duration) const;
+
         context();
         std::shared_ptr<Impl> m_impl;
         std::any m_user_data;
