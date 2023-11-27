@@ -170,7 +170,7 @@ public:
      * @param socket An rvalue reference to the socket
      * @param router A const reference to the Router
      * @param on_action A list of callbacks
-     * @returns context_type
+     * @returns @ref context_type
      */
     template <class... OnAction>
     static auto recv(socket_type&& socket, const router_type& router,
@@ -193,7 +193,7 @@ public:
      * @param router A const reference to the Router
      * @param duration A duration for handling the timeout
      * @param on_action A list of callbacks
-     * @returns context_type
+     * @returns @ref context_type
      */
     template <class TimeDuration,
         class... OnAction>
@@ -216,7 +216,7 @@ public:
      * @param request The request message to be sent
      * @param router A const reference to the router
      * @param on_action A list of callbacks
-     * @returns context_type
+     * @returns @ref context_type
      */
     template <class Request,
         class... OnAction>
@@ -240,7 +240,7 @@ public:
      * @param router A const reference to the router
      * @param duration A duration for handling the timeout
      * @param on_action A list of callbacks
-     * @returns context_type
+     * @returns @ref context_type
      */
     template <class Request,
         class TimeDuration,

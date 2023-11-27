@@ -8,6 +8,13 @@
 
 ROUTER_NAMESPACE_BEGIN()
 
+/// Encapsulates the event loop and handles further asio requests
+/**
+ * The class serves as a wrapper around `boost::asio::io_context`
+ * By the giveb number of threads, create a thread pool and executes 
+ * handlers by leveraging their executors. This class is acceptable
+ * by the @ref session and @connector.
+ */
 class event_loop : public std::enable_shared_from_this<event_loop> {
     template <class, class, class, template <typename> class>
     friend class listener;
@@ -16,18 +23,58 @@ class event_loop : public std::enable_shared_from_this<event_loop> {
     friend class connector;
 
 public:
+    /// The `threads number` type
     using threads_num_type = unsigned int;
+
+    /// This `pointer` type
     using event_loop_ptr_type = std::shared_ptr<event_loop>;
 
+    /// Constructor (disallowed)
     event_loop(const event_loop&) = delete;
+
+    /// Constructor (disallowed)
     event_loop& operator=(const event_loop&) = delete;
+
+    /// Constructor (default)
+    event_loop(event_loop&&) = default;
+
+    /// Assignment (default)
+    event_loop& operator=(event_loop&&) = default;
+
+    /// Destructor
     ~event_loop();
 
+    /// Starts the event loop
+    /**
+     * @returns void
+    */
     ROUTER_DECL int exec();
+
+    /// Returns the number of thread
+    /**
+     * @returns @ref threads_num_type
+    */
     ROUTER_DECL threads_num_type get_threads() const;
+
+    /// Stops the event loop
+    /**
+     * @returns void
+    */
     ROUTER_DECL void stop();
+
+    /// Retruns the running state of event loop
+    /**
+     * @returns bool
+    */
     ROUTER_DECL bool is_running() const;
 
+    /// The method creates an event loop by the given parameters
+    /**
+     * The mthod accepts a pack and forwards to the available 
+     * hidden constructor
+     * @param args...
+     * @returns @ref event_loop_ptr_type
+     */
     template <class... Args>
     static ROUTER_DECL auto create(Args&&... args)
         -> decltype(event_loop { std::declval<Args>()... }, event_loop_ptr_type());
