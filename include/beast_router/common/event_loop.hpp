@@ -35,11 +35,11 @@ public:
     /// Constructor (disallowed)
     event_loop& operator=(const event_loop&) = delete;
 
-    /// Constructor (default)
-    event_loop(event_loop&&) = default;
+    /// Constructor (disallowed)
+    event_loop(event_loop&&) = delete;
 
-    /// Assignment (default)
-    event_loop& operator=(event_loop&&) = default;
+    /// Assignment (disallowed)
+    event_loop& operator=(event_loop&&) = delete;
 
     /// Destructor
     ~event_loop();

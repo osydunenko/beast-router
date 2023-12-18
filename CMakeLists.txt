@@ -8,11 +8,11 @@ include(CMakePackageConfigHelpers)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 # Options decl.
-option(BUILD_EXAMPLES "Build examples" OFF)
-option(ROUTER_DOXYGEN "Generate Doxygen" OFF)
-option(BUILD_TESTS "Build tests" OFF)
-option(LINK_SSL "Build with openssl" OFF)
-option(LINK_ASAN "Build with asan" OFF)
+option(BUILD_EXAMPLES "Build examples"     OFF)
+option(ROUTER_DOXYGEN "Generate Doxygen"   OFF)
+option(BUILD_TESTS    "Build tests"        OFF)
+option(LINK_SSL       "Build with openssl" OFF)
+option(LINK_ASAN      "Build with asan"    OFF)
 
 add_library(${PROJECT_NAME} INTERFACE)
 add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
