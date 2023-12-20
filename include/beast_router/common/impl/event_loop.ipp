@@ -43,11 +43,11 @@ ROUTER_DECL int event_loop::exec()
         m_ioc.stop();
     });
 
-    if (m_threads_num == 0) {
-        m_ioc.run();
-    } else {
+    for (threads_num_type i = 1; i < m_threads_num; ++i) {
         m_threads.create_thread([this]() { m_ioc.run(); });
     }
+
+    m_ioc.run();
 
     return ret_code;
 }
