@@ -3,7 +3,7 @@ FROM ubuntu:23.10 as ubuntu-base
 ENV DEBIAN_FRONTEND=noninteractive
 ENV LD_LIBRARY_PATH=/usr/local/lib/
 
-ARG BOOST_VERSION=1.82.0
+ARG BOOST_VERSION=1.84.0
 
 RUN apt-get -qq update -y \
     && apt-get upgrade -y \

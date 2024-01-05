@@ -42,7 +42,7 @@ public:
     event_loop& operator=(event_loop&&) = delete;
 
     /// Destructor
-    ~event_loop();
+    ROUTER_DECL ~event_loop();
 
     /// Starts the event loop
     /**
@@ -86,7 +86,7 @@ public:
     ROUTER_DECL operator boost::asio::io_context&() { return m_ioc; }
 
 protected:
-    event_loop(threads_num_type threads = 0u);
+    ROUTER_DECL event_loop(threads_num_type threads = 0u);
 
 private:
     threads_num_type m_threads_num;

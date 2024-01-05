@@ -4,7 +4,7 @@
 
 ROUTER_NAMESPACE_BEGIN()
 
-event_loop::event_loop(threads_num_type threads)
+ROUTER_DECL event_loop::event_loop(threads_num_type threads)
     : m_threads_num { threads }
     , m_threads {}
     , m_ioc {}
@@ -12,7 +12,7 @@ event_loop::event_loop(threads_num_type threads)
 {
 }
 
-event_loop::~event_loop()
+ROUTER_DECL event_loop::~event_loop()
 {
     stop();
 }
