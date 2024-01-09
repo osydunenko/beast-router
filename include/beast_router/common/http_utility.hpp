@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../base/config.hpp"
 #include <boost/beast/http/empty_body.hpp>
 #include <boost/beast/http/file_body.hpp>
 #include <boost/beast/http/message.hpp>
